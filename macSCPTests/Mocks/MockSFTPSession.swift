@@ -8,7 +8,12 @@
 import Foundation
 @testable import macSCP
 
-actor MockSFTPSession: SFTPSessionProtocol {
+// The app target uses `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, so protocols
+// such as SFTPSessionProtocol are implicitly MainActor-isolated. A cross-module
+// conformance therefore has to be MainActor-isolated too, which rules out an
+// `actor`; a MainActor class satisfies the same async requirements.
+@MainActor
+final class MockSFTPSession: SFTPSessionProtocol {
     // MARK: - State
     private(set) var isConnected = false
     private(set) var currentPath = "/"

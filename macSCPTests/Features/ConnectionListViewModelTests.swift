@@ -178,4 +178,73 @@ final class ConnectionListViewModelTests: XCTestCase {
         XCTAssertEqual(sut.connectionCount(for: folder.id), 2)
         XCTAssertEqual(sut.totalConnectionCount, 3)
     }
+
+    // MARK: - SSH Config Import Tests
+
+    func testImportConnections_PersistsAllAndSelectsFirst() async {
+        // Given
+        let imported = [
+            Connection(name: "alpha", host: "alpha.example.com", username: "alice"),
+            Connection(name: "beta", host: "beta.example.com", username: "bob")
+        ]
+
+        // When
+        await sut.importConnections(imported)
+
+        // Then
+        XCTAssertEqual(mockConnectionRepository.mockConnections.map(\.name), ["alpha", "beta"])
+        XCTAssertEqual(sut.connections.count, 2)
+        XCTAssertEqual(sut.selectedConnectionId, imported.first?.id)
+    }
+
+    func testImportConnections_SkipsHostsAlreadyStored() async {
+        // Given: one of the imported hosts already exists under another name
+        let existing = Connection(
+            name: "my existing host",
+            host: "alpha.example.com",
+            port: 22,
+            username: "alice"
+        )
+        mockConnectionRepository.mockConnections = [existing]
+
+        let candidates = [
+            Connection(name: "alpha", host: "alpha.example.com", port: 22, username: "alice"),
+            Connection(name: "beta", host: "beta.example.com", port: 22, username: "bob")
+        ]
+
+        // When
+        await sut.importConnections(candidates)
+
+        // Then: only beta is stored; the alias of the existing connection is kept
+        XCTAssertEqual(mockConnectionRepository.mockConnections.map(\.name), ["my existing host", "beta"])
+        XCTAssertNil(sut.error)
+    }
+
+    func testImportConnections_DeduplicatesWithinTheBatch() async {
+        // Given: two aliases pointing at the same host|port|username
+        let candidates = [
+            Connection(name: "first alias", host: "lab.example.com", port: 1185, username: "deploy"),
+            Connection(name: "second alias", host: "lab.example.com", port: 1185, username: "deploy")
+        ]
+
+        // When
+        await sut.importConnections(candidates)
+
+        // Then
+        XCTAssertEqual(mockConnectionRepository.mockConnections.map(\.name), ["first alias"])
+    }
+
+    func testImportConnections_ReportsFailureAndSavesNothing() async {
+        // Given
+        mockConnectionRepository.mockError = AppError.saveFailed("connection")
+
+        // When
+        await sut.importConnections([
+            Connection(name: "alpha", host: "alpha.example.com", username: "alice")
+        ])
+
+        // Then
+        XCTAssertNotNil(sut.error)
+        XCTAssertTrue(mockConnectionRepository.mockConnections.isEmpty)
+    }
 }

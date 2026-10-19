@@ -101,6 +101,20 @@ actor TerminalSession: TerminalSessionProtocol {
     ) async throws {
         logInfo("Connecting terminal to \(username)@\(host):\(port) with private key", category: .network)
 
+        // Load the key first so unsupported/encrypted keys fail with a clear message.
+        let loadedKey: SSHPrivateKeyLoader.LoadedKey
+        do {
+            loadedKey = try SSHPrivateKeyLoader.load(
+                username: username,
+                keyPath: privateKeyPath,
+                passphrase: passphrase
+            )
+        } catch {
+            logError("Failed to load private key: \(error)", category: .network)
+            throw AppError.privateKeyError(error.localizedDescription)
+        }
+        let authMethod = loadedKey.method
+
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         eventLoopGroup = group
         currentSize = terminalSize
@@ -108,17 +122,6 @@ actor TerminalSession: TerminalSessionProtocol {
 
         do {
             let normalizedHost = (host.lowercased() == "localhost") ? "127.0.0.1" : host
-
-            let privateKeyURL = URL(fileURLWithPath: privateKeyPath)
-            let privateKeyData = try Data(contentsOf: privateKeyURL)
-            guard let privateKeyString = String(data: privateKeyData, encoding: .utf8) else {
-                throw AppError.authenticationFailed
-            }
-
-            let authMethod: SSHAuthenticationMethod = try .rsa(
-                username: username,
-                privateKey: .init(sshRsa: privateKeyString)
-            )
 
             client = try await SSHClient.connect(
                 host: normalizedHost,
@@ -141,7 +144,7 @@ actor TerminalSession: TerminalSessionProtocol {
         } catch {
             try? await group.shutdownGracefully()
             eventLoopGroup = nil
-            throw parseConnectionError(error)
+            throw parseConnectionError(error, keyType: loadedKey.inspection.type)
         }
     }
 
@@ -290,21 +293,13 @@ actor TerminalSession: TerminalSessionProtocol {
 
     // MARK: - Error Parsing
 
-    private func parseConnectionError(_ error: Error) -> AppError {
-        let description = error.localizedDescription.lowercased()
-
-        if description.contains("connection refused") {
-            return .connectionFailed("Connection refused. Make sure the SSH server is running.")
-        } else if description.contains("host unreachable") || description.contains("no route to host") {
-            return .hostUnreachable
-        } else if description.contains("timeout") {
-            return .connectionTimeout
-        } else if description.contains("authentication") || description.contains("password") || description.contains("permission denied") {
-            return .authenticationFailed
-        } else if description.contains("operation not permitted") {
-            return .connectionFailed("Operation not permitted. Check firewall settings.")
+    private func parseConnectionError(
+        _ error: Error,
+        keyType: SSHPrivateKeyLoader.KeyType? = nil
+    ) -> AppError {
+        if let mapped = SSHConnectionErrorMapper.map(error, keyType: keyType) {
+            return mapped
         }
-
         return .terminalConnectionFailed(error.localizedDescription)
     }
 }

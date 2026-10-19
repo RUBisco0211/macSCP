@@ -14,6 +14,7 @@ enum AppError: LocalizedError, Sendable {
     case connectionLost
     case authenticationFailed
     case hostUnreachable
+    case privateKeyError(String)
 
     // SFTP errors
     case sftpOperationFailed(String)
@@ -70,6 +71,8 @@ enum AppError: LocalizedError, Sendable {
             return "Connection was lost"
         case .authenticationFailed:
             return "Authentication failed. Please check your credentials."
+        case .privateKeyError(let message):
+            return message
         case .hostUnreachable:
             return "Host is unreachable. Check the hostname and network connection."
 

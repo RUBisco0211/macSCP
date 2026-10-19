@@ -437,6 +437,61 @@ final class ConnectionListViewModel {
         connectionToConnect = nil
     }
 
+    // MARK: - SSH Config Import
+
+    /// Parses a user-selected ssh_config file and stores its hosts.
+    func importSSHConfig() async {
+        guard let configURL = SSHConfigFilePicker.pickConfigFile() else { return }
+
+        let entries: [SSHConfigEntry]
+        do {
+            entries = try SSHConfigParser().parse(configURL: configURL)
+        } catch {
+            logError("Failed to parse ssh_config: \(error)", category: .database)
+            self.error = AppError.from(error)
+            return
+        }
+
+        await importConnections(SSHConfigImporter.connections(from: entries))
+    }
+
+    /// Saves candidates that are not already stored, matched on
+    /// `host|port|username`.
+    func importConnections(_ candidates: [Connection]) async {
+        guard !candidates.isEmpty else { return }
+
+        do {
+            let existing = try await connectionRepository.fetchAll()
+            var knownKeys = Set(existing.map(SSHConfigImporter.deduplicationKey(for:)))
+            let newConnections = candidates.filter { connection in
+                knownKeys.insert(SSHConfigImporter.deduplicationKey(for: connection)).inserted
+            }
+
+            for connection in newConnections {
+                try await connectionRepository.save(connection)
+            }
+
+            await loadData()
+
+            // Imported connections live at the root, so make sure they are visible.
+            selectedSidebarItem = .allConnections
+            if let firstImported = newConnections.first {
+                selectedConnectionId = firstImported.id
+            }
+
+            if !newConnections.isEmpty {
+                AnalyticsService.trackConnectionCreated(protocol: .sftp)
+            }
+            logInfo(
+                "Imported \(newConnections.count) of \(candidates.count) host(s) from ssh_config",
+                category: .database
+            )
+        } catch {
+            logError("Failed to import ssh_config: \(error)", category: .database)
+            self.error = AppError.from(error)
+        }
+    }
+
     // MARK: - Edit Actions
 
     func editConnection(_ connection: Connection) {

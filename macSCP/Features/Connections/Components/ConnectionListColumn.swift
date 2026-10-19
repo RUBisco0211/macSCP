@@ -42,6 +42,15 @@ struct ConnectionListColumn: View {
                     Label("New Connection", systemImage: "square.and.pencil")
                 }
                 .help("New Connection")
+
+                Button {
+                    Task {
+                        await viewModel.importSSHConfig()
+                    }
+                } label: {
+                    Label("Import", systemImage: "doc.badge.plus")
+                }
+                .help("Import hosts from an ssh_config file")
             }
         }
     }
