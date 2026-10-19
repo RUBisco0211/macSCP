@@ -46,9 +46,10 @@ struct ConnectionListColumn: View {
                 Button {
                     viewModel.beginImport()
                 } label: {
-                    Label("Import from ~/.ssh/config", systemImage: "square.and.arrow.down")
+                    Label("Import…", systemImage: "doc.badge.plus")
+                        .labelStyle(.titleAndIcon)
                 }
-                .help("Import from ~/.ssh/config")
+                .help("Choose an SSH config file (usually ~/.ssh/config) and add its hosts. Include directives are skipped.")
             }
         }
     }
