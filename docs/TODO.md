@@ -14,6 +14,9 @@
 4. **不去重**：同一目标多别名、重复导入都会产生新条目，由用户在预览里自行取消勾选。
 5. **认证方式**：密码、RSA、ed25519 三种都要可用。带口令的私钥本阶段只给明确错误提示，口令输入留 P1。
 6. **PR**：提到 origin（`RUBisco0211/macSCP`）的 `main`，描述用中文。
+7. **数据位置**：SwiftData 主库改为 `~/Library/Application Support/macSCP/macSCP.store`。
+   首次启动自动从 SwiftData 默认的 `~/Library/Application Support/default.store` 迁移（含 `-wal`/`-shm` 边车文件）；
+   迁移失败会回滚并继续使用旧位置，避免启动不了。
 
 ## 2. 已完成
 
@@ -26,6 +29,7 @@
 - [x] `SFTPSession` / `TerminalSession` 改用共用加载器，ed25519 可用，密钥错误可诊断（不可读 / 格式不支持 / 需要口令 / 口令错误）。
 - [x] `AppError.privateKeyError` 透传密钥错误文案。
 - [x] 关闭沙盒，删除不再需要的授权/书签服务。
+- [x] 显式 SwiftData 存储路径 + 一次性迁移（`SwiftDataStoreMigrator`），避免与其他未沙盒 SwiftData 应用共用 `default.store`。
 - [x] 构建兼容性修复：`swift-async-algorithms` 1.1.1 → 1.1.7（Xcode 27/Swift 6.2 下 1.1.1 触发 region-isolation 编译错误）；测试替身 `MockSFTPSession` 从 `actor` 改为 `@MainActor final class`（项目默认 `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`，跨模块符合被隐式隔离的协议）。
 
 ## 3. 待办
