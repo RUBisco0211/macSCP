@@ -4,17 +4,23 @@
 //
 //  Moves a SwiftData store from a legacy location to the app-specific one.
 //
-//  SwiftData's default configuration writes to `~/Library/Application Support/
-//  default.store`, a name shared by every non-sandboxed app using the default
-//  configuration. macSCP now points at an app-specific file instead; this
-//  migrator carries existing data over exactly once.
+//  Two legacy locations matter:
+//  - The App Sandbox container store, used by builds that shipped with
+//    `com.apple.security.app-sandbox` (`~/Library/Containers/<bundle-id>/...`).
+//  - SwiftData's default `~/Library/Application Support/default.store`, which is
+//    shared by every non-sandboxed app using the default configuration. It is
+//    only treated as ours when it actually contains macSCP's schema.
 //
 
 import Foundation
 
 enum SwiftDataStoreMigrator {
-    /// SQLite sidecar files that belong to a SwiftData store.
-    static let sidecarSuffixes = ["", "-wal", "-shm"]
+    /// SQLite sidecar files of a SwiftData store. The main file comes last so its
+    /// presence at the destination means the migration finished.
+    static let sidecarSuffixes = ["-wal", "-shm", ""]
+
+    /// Marker that only exists in a macSCP store.
+    private static let schemaMarker = Data("ZCONNECTIONENTITY".utf8)
 
     /// Moves `legacyURL` (plus sidecars) to `destinationURL`.
     ///
@@ -56,5 +62,19 @@ enum SwiftDataStoreMigrator {
             }
             throw error
         }
+    }
+
+    /// Returns true when the SQLite files at `url` belong to a macSCP database.
+    /// The schema name is stored in the file (or its WAL) as plain text, which is
+    /// enough to avoid hijacking another app's `default.store`.
+    static func looksLikeMacSCPStore(at url: URL, fileManager: FileManager = .default) -> Bool {
+        for suffix in sidecarSuffixes {
+            let candidate = URL(fileURLWithPath: url.path + suffix)
+            guard let data = try? Data(contentsOf: candidate) else { continue }
+            if data.range(of: schemaMarker) != nil {
+                return true
+            }
+        }
+        return false
     }
 }

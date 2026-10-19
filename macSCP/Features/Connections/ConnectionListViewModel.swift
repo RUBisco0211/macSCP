@@ -456,9 +456,12 @@ final class ConnectionListViewModel {
     func importConnections(_ connections: [Connection]) async {
         guard !connections.isEmpty else { return }
 
+        var savedConnections: [Connection] = []
+
         do {
             for connection in connections {
                 try await connectionRepository.save(connection)
+                savedConnections.append(connection)
             }
 
             await loadData()
@@ -473,6 +476,12 @@ final class ConnectionListViewModel {
             AnalyticsService.trackConnectionCreated(protocol: .sftp)
             logInfo("Imported \(connections.count) connection(s) from ssh config", category: .database)
         } catch {
+            // Keep the sheet open and drop the rows that were already saved, so a
+            // retry does not submit them a second time.
+            await loadData()
+            for connection in savedConnections {
+                sshConfigImportViewModel?.setSelected(false, forAlias: connection.name)
+            }
             logError("Failed to import connections: \(error)", category: .database)
             self.error = AppError.from(error)
         }

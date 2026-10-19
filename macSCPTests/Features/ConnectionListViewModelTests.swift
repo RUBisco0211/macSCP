@@ -213,4 +213,35 @@ final class ConnectionListViewModelTests: XCTestCase {
         XCTAssertNotNil(sut.error)
         XCTAssertTrue(mockConnectionRepository.mockConnections.isEmpty)
     }
+
+    func testImportConnections_PartialFailureDeselectsSavedRowsAndKeepsSheetOpen() async {
+        // Given: a preview with two rows
+        let configURL = URL(fileURLWithPath: "/Users/test/.ssh/config")
+        let parser = SSHConfigParser(
+            reader: StubSSHConfigReader(files: [configURL.path: "Host alpha\nHost beta\n"]),
+            options: SSHConfigParseOptions(homeDirectory: "/Users/test"),
+            fileExists: { _ in true },
+            includeExpander: { _ in [] }
+        )
+        let importViewModel = SSHConfigImportViewModel(
+            configURL: configURL,
+            parser: parser,
+            defaultUsername: "tester"
+        )
+        await importViewModel.load()
+
+        sut.sshConfigImportViewModel = importViewModel
+        sut.isShowingImportSheet = true
+        mockConnectionRepository.failSaveOnCall = 2
+
+        // When
+        await sut.importConnections(importViewModel.selectedConnections)
+
+        // Then: the first connection stayed saved, the sheet is still open, and only
+        // the failed row remains selected for a retry.
+        XCTAssertEqual(mockConnectionRepository.mockConnections.map(\.name), ["alpha"])
+        XCTAssertNotNil(sut.error)
+        XCTAssertTrue(sut.isShowingImportSheet)
+        XCTAssertEqual(importViewModel.selectedConnections.map(\.name), ["beta"])
+    }
 }

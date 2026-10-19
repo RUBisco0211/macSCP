@@ -102,9 +102,9 @@ actor TerminalSession: TerminalSessionProtocol {
         logInfo("Connecting terminal to \(username)@\(host):\(port) with private key", category: .network)
 
         // Load the key first so unsupported/encrypted keys fail with a clear message.
-        let authMethod: SSHAuthenticationMethod
+        let loadedKey: SSHPrivateKeyLoader.LoadedKey
         do {
-            authMethod = try SSHPrivateKeyLoader.authenticationMethod(
+            loadedKey = try SSHPrivateKeyLoader.load(
                 username: username,
                 keyPath: privateKeyPath,
                 passphrase: passphrase
@@ -113,6 +113,7 @@ actor TerminalSession: TerminalSessionProtocol {
             logError("Failed to load private key: \(error)", category: .network)
             throw AppError.privateKeyError(error.localizedDescription)
         }
+        let authMethod = loadedKey.method
 
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         eventLoopGroup = group
@@ -143,7 +144,7 @@ actor TerminalSession: TerminalSessionProtocol {
         } catch {
             try? await group.shutdownGracefully()
             eventLoopGroup = nil
-            throw parseConnectionError(error)
+            throw parseConnectionError(error, keyType: loadedKey.inspection.type)
         }
     }
 
@@ -292,7 +293,10 @@ actor TerminalSession: TerminalSessionProtocol {
 
     // MARK: - Error Parsing
 
-    private func parseConnectionError(_ error: Error) -> AppError {
+    private func parseConnectionError(
+        _ error: Error,
+        keyType: SSHPrivateKeyLoader.KeyType? = nil
+    ) -> AppError {
         let description = error.localizedDescription.lowercased()
 
         if description.contains("connection refused") {
@@ -302,6 +306,9 @@ actor TerminalSession: TerminalSessionProtocol {
         } else if description.contains("timeout") {
             return .connectionTimeout
         } else if description.contains("authentication") || description.contains("password") || description.contains("permission denied") {
+            if keyType == .rsa {
+                return .privateKeyError(SSHPrivateKeyLoader.legacyRSASignatureMessage)
+            }
             return .authenticationFailed
         } else if description.contains("operation not permitted") {
             return .connectionFailed("Operation not permitted. Check firewall settings.")

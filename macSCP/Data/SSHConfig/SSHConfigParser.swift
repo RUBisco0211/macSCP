@@ -77,11 +77,15 @@ struct SSHConfigParser: Sendable {
 
     func parse(configURL: URL) throws -> SSHConfigParseResult {
         var state = State()
-        var currentSection = 0
+        var currentSection: Int?
+        // ssh resolves relative Include paths against the user config directory
+        // (`~/.ssh`), not against the process working directory.
+        let configDirectory = configURL.deletingLastPathComponent().standardizedFileURL
         try load(
             url: configURL,
             depth: 0,
             stack: [],
+            configDirectory: configDirectory,
             currentSection: &currentSection,
             state: &state
         )
@@ -102,11 +106,10 @@ struct SSHConfigParser: Sendable {
     }
 
     private struct State {
-        /// Index 0 is the implicit global block covering everything before the
-        /// first Host keyword, mirroring ssh's "applies to all hosts" semantics.
-        var sections: [Section] = [
-            Section(patterns: ["*"], values: [:], isMatch: false)
-        ]
+        /// Ordered blocks, exactly as they appear in the (included) files.
+        /// Global directives become `*` blocks at the position where they occur,
+        /// so content spliced in by an earlier Include still precedes them.
+        var sections: [Section] = []
         var warnings: [SSHConfigWarning] = []
         var sourcePaths: [String] = []
     }
@@ -117,7 +120,8 @@ struct SSHConfigParser: Sendable {
         url: URL,
         depth: Int,
         stack: [String],
-        currentSection: inout Int,
+        configDirectory: URL,
+        currentSection: inout Int?,
         state: inout State
     ) throws {
         let path = url.standardizedFileURL.path
@@ -170,8 +174,13 @@ struct SSHConfigParser: Sendable {
                 currentSection = state.sections.count - 1
 
             case "include":
+                // OpenSSH restores the parent file's active block after the
+                // include, so directives that follow it stay where they were.
+                let sectionBeforeInclude = currentSection
+                defer { currentSection = sectionBeforeInclude }
+
                 for pattern in tokens {
-                    let candidates = includeExpander(pattern)
+                    let candidates = includeExpander(resolveIncludePattern(pattern, configDirectory: configDirectory))
                     guard !candidates.isEmpty else {
                         state.warnings.append(.includeNotFound(pattern))
                         continue
@@ -192,6 +201,7 @@ struct SSHConfigParser: Sendable {
                             url: includedURL,
                             depth: depth + 1,
                             stack: stack + [path],
+                            configDirectory: configDirectory,
                             currentSection: &currentSection,
                             state: &state
                         )
@@ -204,9 +214,25 @@ struct SSHConfigParser: Sendable {
                     state.warnings.append(.malformedLine(path: path, line: offset + 1, content: rawLine))
                     continue
                 }
-                state.sections[currentSection].values[key.lowercased(), default: []].append(value)
+                // Directives outside a Host/Match block are global defaults. They
+                // start a new `*` block when they appear after an Include, so they
+                // do not jump ahead of the included content.
+                if currentSection == nil {
+                    state.sections.append(Section(patterns: ["*"], values: [:], isMatch: false))
+                    currentSection = state.sections.count - 1
+                }
+                state.sections[currentSection!].values[key.lowercased(), default: []].append(value)
             }
         }
+    }
+
+    /// Relative Include patterns are resolved against the user config directory
+    /// (`~/.ssh`), matching ssh_config(5).
+    private func resolveIncludePattern(_ pattern: String, configDirectory: URL) -> String {
+        if pattern.hasPrefix("/") || pattern.hasPrefix("~") {
+            return pattern
+        }
+        return configDirectory.appendingPathComponent(pattern).path
     }
 
     // MARK: Resolution
@@ -265,11 +291,25 @@ struct SSHConfigParser: Sendable {
         resolved: [String: [String]],
         state: inout State
     ) -> SSHConfigEntry {
-        let hostName = expandTokens(resolved["hostname"]?.first ?? alias, resolved: resolved)
-        let user = resolved["user"]?.first.map { expandTokens($0, resolved: resolved) }
+        let portValue = resolved["port"]?.first
+        let portString = portValue ?? String(AppConstants.defaultSSHPort)
+        let localUser = NSUserName()
+        let resolvedUser = resolved["user"]?.first ?? localUser
+
+        // In ssh, %h inside HostName expands to the alias, while %h in other
+        // directives expands to the resolved hostname.
+        let hostName = expandTokens(
+            resolved["hostname"]?.first ?? alias,
+            host: alias,
+            user: resolvedUser,
+            port: portString
+        )
+        let user = resolved["user"]?.first.map {
+            expandTokens($0, host: alias, user: resolvedUser, port: portString)
+        }
 
         var port = AppConstants.defaultSSHPort
-        if let rawPort = resolved["port"]?.first {
+        if let rawPort = portValue {
             if let parsed = Int(rawPort.trimmed), (1...65535).contains(parsed) {
                 port = parsed
             } else {
@@ -279,7 +319,9 @@ struct SSHConfigParser: Sendable {
 
         var identityFiles: [String] = []
         for rawPath in resolved["identityfile"] ?? [] {
-            let expanded = expandTilde(expandTokens(rawPath, resolved: resolved))
+            let expanded = expandTilde(
+                expandTokens(rawPath, host: hostName, user: user ?? localUser, port: portString)
+            )
             guard !identityFiles.contains(expanded) else { continue }
             identityFiles.append(expanded)
             if !fileExists(expanded) {
@@ -321,12 +363,8 @@ struct SSHConfigParser: Sendable {
     }
 
     /// Expands ssh's percent tokens. Unknown tokens are passed through unchanged.
-    private func expandTokens(_ value: String, resolved: [String: [String]]) -> String {
+    private func expandTokens(_ value: String, host: String, user: String, port: String) -> String {
         guard value.contains("%") else { return value }
-
-        let host = resolved["hostname"]?.first ?? ""
-        let user = resolved["user"]?.first ?? ""
-        let port = resolved["port"]?.first ?? String(AppConstants.defaultSSHPort)
 
         let characters = Array(value)
         var output = ""

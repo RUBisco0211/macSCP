@@ -14,7 +14,7 @@ final class SSHConfigImporterTests: XCTestCase {
     private func entry(
         alias: String = "lab",
         hostName: String = "lab.example.com",
-        user: String? = "linminlei",
+        user: String? = "deploy",
         port: Int = 1185,
         identityFiles: [String] = ["/Users/test/.ssh/id_rsa"]
     ) -> SSHConfigEntry {
@@ -41,7 +41,7 @@ final class SSHConfigImporterTests: XCTestCase {
         XCTAssertEqual(connection.name, "lab")
         XCTAssertEqual(connection.host, "lab.example.com")
         XCTAssertEqual(connection.port, 1185)
-        XCTAssertEqual(connection.username, "linminlei")
+        XCTAssertEqual(connection.username, "deploy")
         XCTAssertEqual(connection.authMethod, .privateKey)
         XCTAssertEqual(connection.privateKeyPath, "/Users/test/.ssh/id_rsa")
         XCTAssertFalse(connection.savePassword)
@@ -69,14 +69,14 @@ final class SSHConfigImporterTests: XCTestCase {
     func testImportsEveryEntryWithoutDeduplication() {
         let connections = SSHConfigImporter.connections(
             from: [
-                entry(alias: "lab-port-1185"),
-                entry(alias: "lab-port-1185-codex")
+                entry(alias: "lab-host"),
+                entry(alias: "lab-host-codex")
             ],
             defaultUsername: "fallback",
             now: now
         )
 
-        XCTAssertEqual(connections.map(\.name), ["lab-port-1185", "lab-port-1185-codex"])
+        XCTAssertEqual(connections.map(\.name), ["lab-host", "lab-host-codex"])
     }
 
     func testUsesProvidedFolderWhenRequested() {

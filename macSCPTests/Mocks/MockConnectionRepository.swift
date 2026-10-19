@@ -35,6 +35,9 @@ final class MockConnectionRepository: ConnectionRepositoryProtocol, @unchecked S
     var mockConnection: Connection?
     var mockError: Error?
     var mockCount: Int = 0
+    /// Fails the Nth `save` call (1-based) to simulate a partial batch failure.
+    var failSaveOnCall: Int?
+    private(set) var saveCallCount = 0
 
     // MARK: - Protocol Implementation
 
@@ -64,7 +67,11 @@ final class MockConnectionRepository: ConnectionRepositoryProtocol, @unchecked S
     func save(_ connection: Connection) async throws {
         saveCalled = true
         lastSavedConnection = connection
+        saveCallCount += 1
         if let error = mockError { throw error }
+        if let failSaveOnCall = failSaveOnCall, saveCallCount == failSaveOnCall {
+            throw AppError.saveFailed("injected failure")
+        }
         mockConnections.append(connection)
     }
 

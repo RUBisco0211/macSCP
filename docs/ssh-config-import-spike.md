@@ -58,9 +58,17 @@ modes are distinct and actionable:
 | Encrypted key, no passphrase | "protected by a passphrase, which is not supported yet" |
 | Encrypted key, wrong passphrase | "passphrase … is incorrect" |
 | Encrypted key, bcrypt rounds >= 18 | actionable message with `ssh-keygen -p -a 16` (Citadel 0.11.x limit; OpenSSH 10 defaults to 24) |
+| RSA rejected by the server | explains that Citadel signs with legacy `ssh-rsa` (SHA-1) and suggests ed25519 |
 
 Passphrase input is intentionally out of scope for this change; the loader
 already accepts the parameter and passes it to Citadel's `decryptionKey:`.
+
+Known library limit: Citadel (0.11.x and 0.12.x) signs RSA authentication with
+SHA-1 and labels the signature `ssh-rsa`. OpenSSH 8.8+ disables that algorithm by
+default, so servers that require `rsa-sha2-256/512` reject RSA keys. Verified
+against the local server: the default OpenSSH client authenticates with
+`rsa-sha2-512`, while forcing `PubkeyAcceptedAlgorithms=ssh-rsa` is denied.
+The connection error explains this and points at ed25519 keys.
 
 Known library limit: Citadel 0.11.x rejects bcrypt KDF rounds >= 18, while
 OpenSSH 10 (macOS 27) defaults to 24. Encrypted keys from this machine therefore
@@ -91,10 +99,10 @@ Parsing the local `~/.ssh/config` yields 5 entries:
 | alias | target | auth | note |
 |---|---|---|---|
 | `orb` | `default@127.0.0.1:32222` | ed25519 | comes from `Include ~/.orbstack/ssh/config`; needs `ProxyCommand`, so it imports but cannot connect |
-| `winpc-wsl-lan` | `rubisco0211@rubisco-winpc.local:22` | rsa | |
-| `winpc-wsl-tailscale` | `rubisco0211@rubisco-winpc.tailbd6e7c.ts.net:22` | rsa | |
-| `lab-port-1185` | `linminlei@my.wansen.co:1185` | rsa | |
-| `lab-port-1185-codex` | `linminlei@my.wansen.co:1185` | rsa | same target as above |
+| `devbox-wsl-lan` | `deploy@workstation.local:22` | rsa | |
+| `devbox-wsl-tailnet` | `deploy@buildhost.example.net:22` | rsa | |
+| `lab-host` | `deploy@lab.example.com:1185` | rsa | |
+| `lab-host-codex` | `deploy@lab.example.com:1185` | rsa | same target as above |
 
 Notes that shaped the parser: `HostName` values can carry trailing spaces, and
 real configs do rely on `Include` pointing outside `~/.ssh`.

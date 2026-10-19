@@ -130,7 +130,47 @@ final class SwiftDataStoreMigratorTests: XCTestCase {
         XCTAssertEqual(url.deletingLastPathComponent().lastPathComponent, "macSCP")
     }
 
-    func testLegacyStoreIsSwiftDataDefault() {
-        XCTAssertEqual(DataStore.legacyStoreURL().lastPathComponent, "default.store")
+    func testSharedDefaultStoreIsSwiftDataDefault() {
+        XCTAssertEqual(DataStore.sharedDefaultStoreURL().lastPathComponent, "default.store")
+    }
+
+    func testSandboxContainerStorePathUsesBundleIdentifier() {
+        let url = DataStore.sandboxContainerStoreURL(bundleIdentifier: "com.example.app")
+
+        XCTAssertTrue(url.path.contains("/Library/Containers/com.example.app/Data/Library/Application Support/"))
+        XCTAssertEqual(url.lastPathComponent, "default.store")
+    }
+
+    func testLegacyCandidatesPreferSandboxContainer() {
+        let candidates = DataStore.legacyStoreCandidates()
+
+        XCTAssertEqual(candidates.count, 2)
+        XCTAssertTrue(candidates[0].path.contains("/Library/Containers/"))
+        XCTAssertEqual(candidates[1], DataStore.sharedDefaultStoreURL())
+    }
+
+    // MARK: - Store identification
+
+    func testDetectsMacSCPStoreBySchemaMarker() throws {
+        let ours = root.appendingPathComponent("ours.store")
+        try Data("sqlite...ZCONNECTIONENTITY...".utf8).write(to: ours)
+        XCTAssertTrue(SwiftDataStoreMigrator.looksLikeMacSCPStore(at: ours))
+
+        let foreign = root.appendingPathComponent("foreign.store")
+        try Data("sqlite...ZFOREIGNENTITY...".utf8).write(to: foreign)
+        XCTAssertFalse(SwiftDataStoreMigrator.looksLikeMacSCPStore(at: foreign))
+    }
+
+    func testDetectsSchemaMarkerInWALFile() throws {
+        let store = root.appendingPathComponent("wal-only.store")
+        try Data("empty".utf8).write(to: store)
+        try Data("ZCONNECTIONENTITY".utf8).write(to: URL(fileURLWithPath: store.path + "-wal"))
+
+        XCTAssertTrue(SwiftDataStoreMigrator.looksLikeMacSCPStore(at: store))
+    }
+
+    func testMainStoreMovesLast() {
+        XCTAssertEqual(SwiftDataStoreMigrator.sidecarSuffixes.first, "-wal")
+        XCTAssertEqual(SwiftDataStoreMigrator.sidecarSuffixes.last, "")
     }
 }

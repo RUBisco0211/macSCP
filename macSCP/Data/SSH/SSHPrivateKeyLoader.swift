@@ -58,7 +58,36 @@ enum SSHPrivateKeyLoader {
         let isEncrypted: Bool
     }
 
+    struct LoadedKey {
+        let method: SSHAuthenticationMethod
+        let inspection: Inspection
+    }
+
+    /// Explains why an RSA key can fail even though the key itself is valid.
+    /// Citadel 0.11.x/0.12.x signs with SHA-1 and labels the signature
+    /// `ssh-rsa`; OpenSSH 8.8+ disables that algorithm by default, so servers
+    /// require the newer rsa-sha2-256/512 signatures instead.
+    static let legacyRSASignatureMessage = "The server rejected this RSA key. macSCP signs RSA authentication with the legacy ssh-rsa (SHA-1) algorithm, which modern OpenSSH servers disable. Use an ed25519 key instead."
+
     // MARK: - Public API
+
+    /// Loads the key at `keyPath` and builds the Citadel authentication method,
+    /// returning the detected key type so callers can explain failures.
+    static func load(
+        username: String,
+        keyPath: String,
+        passphrase: String? = nil
+    ) throws -> LoadedKey {
+        let pem = try readPEM(at: keyPath)
+        let inspection = try inspect(pem: pem)
+        let method = try authenticationMethod(
+            username: username,
+            pem: pem,
+            inspection: inspection,
+            passphrase: passphrase
+        )
+        return LoadedKey(method: method, inspection: inspection)
+    }
 
     /// Builds the Citadel authentication method for the key at `keyPath`.
     /// Passing `passphrase` for an encrypted key decrypts it; encrypted keys
@@ -69,6 +98,24 @@ enum SSHPrivateKeyLoader {
         keyPath: String,
         passphrase: String? = nil
     ) throws -> SSHAuthenticationMethod {
+        let pem = try readPEM(at: keyPath)
+        let inspection = try inspect(pem: pem)
+        return try authenticationMethod(
+            username: username,
+            pem: pem,
+            inspection: inspection,
+            passphrase: passphrase
+        )
+    }
+
+    /// Detects the key type without building an authentication method.
+    static func inspection(atPath keyPath: String) throws -> Inspection {
+        try inspect(pem: readPEM(at: keyPath))
+    }
+
+    // MARK: - Internals
+
+    private static func readPEM(at keyPath: String) throws -> String {
         let data: Data
         do {
             data = try Data(contentsOf: URL(fileURLWithPath: keyPath))
@@ -79,8 +126,15 @@ enum SSHPrivateKeyLoader {
         guard let pem = String(data: data, encoding: .utf8) else {
             throw SSHPrivateKeyError.unsupportedFormat
         }
+        return pem
+    }
 
-        let inspection = try inspect(pem: pem)
+    private static func authenticationMethod(
+        username: String,
+        pem: String,
+        inspection: Inspection,
+        passphrase: String?
+    ) throws -> SSHAuthenticationMethod {
         let decryptionKey = passphrase.flatMap { $0.isEmpty ? nil : Data($0.utf8) }
 
         if inspection.isEncrypted, decryptionKey == nil {

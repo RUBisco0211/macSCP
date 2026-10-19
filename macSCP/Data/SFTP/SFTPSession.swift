@@ -74,9 +74,9 @@ actor SFTPSession: SFTPSessionProtocol {
 
         // Load the key before touching the event loop so key problems surface as
         // actionable errors instead of generic authentication failures.
-        let authMethod: SSHAuthenticationMethod
+        let loadedKey: SSHPrivateKeyLoader.LoadedKey
         do {
-            authMethod = try SSHPrivateKeyLoader.authenticationMethod(
+            loadedKey = try SSHPrivateKeyLoader.load(
                 username: username,
                 keyPath: privateKeyPath,
                 passphrase: passphrase
@@ -85,6 +85,7 @@ actor SFTPSession: SFTPSessionProtocol {
             logError("Failed to load private key: \(error)", category: .sftp)
             throw AppError.privateKeyError(error.localizedDescription)
         }
+        let authMethod = loadedKey.method
 
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         eventLoopGroup = group
@@ -108,7 +109,7 @@ actor SFTPSession: SFTPSessionProtocol {
         } catch {
             try? await group.shutdownGracefully()
             eventLoopGroup = nil
-            throw parseConnectionError(error)
+            throw parseConnectionError(error, keyType: loadedKey.inspection.type)
         }
     }
 
@@ -548,7 +549,10 @@ actor SFTPSession: SFTPSessionProtocol {
         return result
     }
 
-    private func parseConnectionError(_ error: Error) -> AppError {
+    private func parseConnectionError(
+        _ error: Error,
+        keyType: SSHPrivateKeyLoader.KeyType? = nil
+    ) -> AppError {
         let description = error.localizedDescription.lowercased()
 
         if description.contains("connection refused") {
@@ -558,6 +562,9 @@ actor SFTPSession: SFTPSessionProtocol {
         } else if description.contains("timeout") {
             return .connectionTimeout
         } else if description.contains("authentication") || description.contains("password") || description.contains("permission denied") {
+            if keyType == .rsa {
+                return .privateKeyError(SSHPrivateKeyLoader.legacyRSASignatureMessage)
+            }
             return .authenticationFailed
         } else if description.contains("operation not permitted") {
             return .connectionFailed("Operation not permitted. Check firewall settings.")

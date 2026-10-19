@@ -56,13 +56,36 @@ struct SSHConfigImportSheet: View {
 
         case .success:
             if viewModel.rows.isEmpty {
-                ContentUnavailableView(
-                    "No Hosts Found",
-                    systemImage: "server.rack",
-                    description: Text("~/.ssh/config does not contain any host entries.")
-                )
+                noHostsView
             } else {
                 hostList
+            }
+        }
+    }
+
+    /// The empty state has to explain *why* nothing was imported: a failed
+    /// Include or a wildcard-only config produces warnings but no rows.
+    private var noHostsView: some View {
+        VStack(spacing: 12) {
+            ContentUnavailableView {
+                Label("No Hosts Found", systemImage: "server.rack")
+            } description: {
+                Text(viewModel.generalWarnings.isEmpty
+                     ? "~/.ssh/config does not contain any host entries."
+                     : "No entries in ~/.ssh/config could be imported.")
+            }
+
+            if !viewModel.generalWarnings.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(viewModel.generalWarnings, id: \.self) { warning in
+                        Label(warning, systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 12)
             }
         }
     }

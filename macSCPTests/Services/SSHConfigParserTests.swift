@@ -54,7 +54,7 @@ final class SSHConfigParserTests: XCTestCase {
         let result = try parse("""
         Host lab
             HostName lab.example.com
-            User linminlei
+            User deploy
             Port 1185
             IdentityFile ~/.ssh/id_rsa
         """, existingFiles: ["/Users/test/.ssh/id_rsa"])
@@ -63,7 +63,7 @@ final class SSHConfigParserTests: XCTestCase {
         let entry = try XCTUnwrap(result.entries.first)
         XCTAssertEqual(entry.alias, "lab")
         XCTAssertEqual(entry.hostName, "lab.example.com")
-        XCTAssertEqual(entry.user, "linminlei")
+        XCTAssertEqual(entry.user, "deploy")
         XCTAssertEqual(entry.port, 1185)
         XCTAssertEqual(entry.identityFiles, ["/Users/test/.ssh/id_rsa"])
         XCTAssertTrue(entry.usesKeyAuthentication)
@@ -85,13 +85,13 @@ final class SSHConfigParserTests: XCTestCase {
     func testTrimsTrailingWhitespaceAndStripsComments() throws {
         let result = try parse("""
         Host web   # production box
-            HostName my.wansen.co\u{20}\u{20}\u{20}
+            HostName lab.example.com\u{20}\u{20}\u{20}
             User deploy
         """)
 
         let entry = try XCTUnwrap(result.entries.first)
         XCTAssertEqual(entry.alias, "web")
-        XCTAssertEqual(entry.hostName, "my.wansen.co")
+        XCTAssertEqual(entry.hostName, "lab.example.com")
         XCTAssertEqual(entry.user, "deploy")
     }
 
@@ -353,5 +353,61 @@ final class SSHConfigParserTests: XCTestCase {
                 return false
             }
         )
+    }
+
+    // MARK: - ssh semantics found in review
+
+    func testResolvesRelativeIncludeAgainstConfigDirectory() throws {
+        let result = try parse(
+            "Include config.d/*",
+            includes: ["/Users/test/.ssh/config.d/*": ["/Users/test/.ssh/config.d/extra"]],
+            extraFiles: ["/Users/test/.ssh/config.d/extra": "Host included\n"]
+        )
+
+        XCTAssertEqual(result.entries.map(\.alias), ["included"])
+        XCTAssertFalse(result.warnings.contains { warning in
+            if case .includeNotFound = warning { return true }
+            return false
+        })
+    }
+
+    func testIncludeDoesNotStealFollowingDirectives() throws {
+        let result = try parse("""
+        Include ~/.ssh/extra
+        User globaluser
+
+        Host after
+            HostName after.example.com
+        """,
+        includes: ["~/.ssh/extra": ["/Users/test/.ssh/extra"]],
+        extraFiles: ["/Users/test/.ssh/extra": "Host included\n    User includeduser\n"])
+
+        let included = try XCTUnwrap(result.entries.first { $0.alias == "included" })
+        XCTAssertEqual(included.user, "includeduser")
+
+        let after = try XCTUnwrap(result.entries.first { $0.alias == "after" })
+        XCTAssertEqual(after.user, "globaluser")
+    }
+
+    func testHostNameTokenExpandsToAlias() throws {
+        let result = try parse("""
+        Host web
+            HostName %h.corp.example.com
+        """)
+
+        XCTAssertEqual(result.entries.first?.hostName, "web.corp.example.com")
+    }
+
+    func testRemoteUserTokenFallsBackToLocalUser() throws {
+        let localUser = NSUserName()
+        let expectedPath = "/Users/test/.ssh/id_\(localUser)"
+
+        let result = try parse("""
+        Host keyed
+            IdentityFile ~/.ssh/id_%r
+        """, existingFiles: [expectedPath])
+
+        XCTAssertEqual(result.entries.first?.identityFiles, [expectedPath])
+        XCTAssertTrue(result.warnings.isEmpty)
     }
 }
