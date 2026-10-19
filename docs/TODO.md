@@ -28,6 +28,10 @@
 - [x] `SFTPSession` / `TerminalSession` 改用共用加载器，ed25519 可用，密钥错误可诊断（不可读 / 格式不支持 / 需要口令 / 口令错误）。
 - [x] `AppError.privateKeyError` 透传密钥错误文案。
 - [x] 关闭 App Sandbox（便于读取密钥），导入通过 `SSHConfigFilePicker` 由用户选择 `ssh_config` 文件，解析器不读取 Include 目标。
+- [x] **RSA 认证支持 rsa-sha2-256/512**：依赖自己 fork 的 Citadel（`RUBisco0211/Citadel` 分支 `rsa-sha2` @ `9f55d61`，按 revision 固定，内容即上游 PR #135），
+      加载器改用 `SSHAuthenticationMethod.rsaSHA2`，依次提供 `rsa-sha2-512`、`rsa-sha2-256`，最后回退 `ssh-rsa`。
+      已用真实服务器验证：同一把 RSA 密钥之前 `allAuthenticationOptionsFailed`，现在认证成功。
+      **后续动作**：上游合并 #135 后切回官方包并删除 fork 分支；在此之前若需更新 fork，把 `rsa-sha2` rebase 到上游 `main`。
 - [x] 构建兼容性修复：`swift-async-algorithms` 1.1.1 → 1.1.7（Xcode 27/Swift 6.2 下 1.1.1 触发 region-isolation 编译错误）；测试替身 `MockSFTPSession` 从 `actor` 改为 `@MainActor final class`（项目默认 `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`，跨模块符合被隐式隔离的协议）。
 
 ## 3. 待办
@@ -35,21 +39,13 @@
 ### P1
 
 - [ ] 带口令私钥的输入 UI（加载器已预留 `passphrase` 参数）。
-      注意：**Citadel 0.11.x 只接受 bcrypt KDF rounds < 18，而 OpenSSH 10 默认 24**，
-      因此 macOS 27 上新生成的加密密钥无法解密。当前加载器会给出可操作错误
-      （提示 `ssh-keygen -p -a 16 -f <key>`）。要真正支持，需要升级 Citadel
-      或自行实现 bcrypt KDF 解密。
+      当前依赖的 Citadel 允许 bcrypt rounds < 32，OpenSSH 10 的默认 24 轮可以正常解密，
+      所以只剩 UI：连接时提示输入口令、可选记住到 Keychain。
 - [ ] `ConnectionEntity` 增加 `source` / `sourceAlias`，重复导入时更新而非新增（SwiftData 轻量迁移，需用旧库验证）。
-- [ ] 导入后 banner 提示"已导入 N 条"。
-- [ ] 如果以后需要跟随 `Include`：把被包含文件也纳入解析，并补上去重与去重 key 的说明。
-
-- [x] **RSA 认证支持 rsa-sha2-256/512**：依赖自己 fork 的 Citadel（`RUBisco0211/Citadel` 分支 `rsa-sha2` @ `9f55d61`，按 revision 固定，内容即上游 PR #135），
-      加载器改用 `SSHAuthenticationMethod.rsaSHA2`，依次提供 `rsa-sha2-512`、`rsa-sha2-256`，最后回退 `ssh-rsa`。
-      已用真实服务器验证：同一把 RSA 密钥之前 `allAuthenticationOptionsFailed`，现在认证成功。
-      **后续动作**：上游合并 #135 后切回官方包并删除 fork 分支；在此之前若需更新 fork，把 `rsa-sha2` rebase 到上游 `main`。
 
 ### P2
 
+- [ ] 跟随 `Include`（当前明确不做：只解析用户选中的文件）。
 - [ ] `ProxyJump` 跳板连接。
 - [ ] 配置变更检测 / 重新导入预览差异。
 - [ ] PEM 格式 RSA 密钥（`-----BEGIN RSA PRIVATE KEY-----`）转换或直接支持。

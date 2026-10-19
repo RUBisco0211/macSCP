@@ -38,13 +38,13 @@ enum SSHPrivateKeyError: LocalizedError, Equatable, Sendable {
         case .incorrectPassphrase:
             return "The passphrase for this private key is incorrect."
         case .unsupportedKeyEncryption(let rounds):
-            return "This key uses \(rounds) bcrypt KDF rounds, but the SSH library supports fewer than \(Self.maxSupportedBCryptRounds). Re-encrypt it with ssh-keygen -p -a 16 -f <key>, or use an unencrypted key."
+            return "This key uses \(rounds) bcrypt KDF rounds, but the SSH library supports fewer than \(Self.maxSupportedBCryptRounds). Re-encrypt it with ssh-keygen -p -a 16 -f <key>."
         }
     }
 
-    /// Citadel 0.11.x rejects bcrypt KDF rounds at or above this value. OpenSSH 10
-    /// defaults to 24, so passphrase-protected keys made on macOS 27 hit this.
-    static let maxSupportedBCryptRounds = 18
+    /// Citadel rejects bcrypt KDF rounds at or above this value. OpenSSH 10
+    /// defaults to 24, which the pinned Citadel supports.
+    static let maxSupportedBCryptRounds = 32
 }
 
 enum SSHPrivateKeyLoader {

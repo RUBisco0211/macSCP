@@ -46,7 +46,7 @@ final class SSHPrivateKeyLoaderTests: XCTestCase {
     }
 
     func testDetectsEncryptedKey() throws {
-        let url = try generateKey(type: "ed25519", passphrase: "secret123", rounds: 16, name: "id_ed25519_enc")
+        let url = try generateKey(type: "ed25519", passphrase: "secret123", name: "id_ed25519_enc")
         let inspection = try SSHPrivateKeyLoader.inspect(pem: try contents(of: url))
 
         XCTAssertEqual(inspection.type, .ed25519)
@@ -160,9 +160,21 @@ final class SSHPrivateKeyLoaderTests: XCTestCase {
         }
     }
 
-    func testEncryptedKeyWithModernKDFRoundsIsRejected() throws {
-        // OpenSSH 10 defaults to 24 bcrypt rounds, which Citadel 0.11.x refuses.
-        let url = try generateKey(type: "ed25519", passphrase: "secret123", rounds: 24, name: "id_ed25519_modern")
+    func testEncryptedKeyWithOpenSSHDefaultRoundsIsAccepted() throws {
+        // OpenSSH 10 defaults to 24 bcrypt rounds; the pinned Citadel supports < 32.
+        let url = try generateKey(type: "ed25519", passphrase: "secret123", name: "id_ed25519_default_rounds")
+
+        XCTAssertNoThrow(
+            try SSHPrivateKeyLoader.authenticationMethod(
+                username: "tester",
+                keyPath: url.path,
+                passphrase: "secret123"
+            )
+        )
+    }
+
+    func testEncryptedKeyBeyondSupportedKDFRoundsIsRejected() throws {
+        let url = try generateKey(type: "ed25519", passphrase: "secret123", rounds: 32, name: "id_ed25519_heavy")
 
         XCTAssertThrowsError(
             try SSHPrivateKeyLoader.authenticationMethod(
@@ -171,7 +183,7 @@ final class SSHPrivateKeyLoaderTests: XCTestCase {
                 passphrase: "secret123"
             )
         ) { error in
-            XCTAssertEqual(error as? SSHPrivateKeyError, .unsupportedKeyEncryption(rounds: 24))
+            XCTAssertEqual(error as? SSHPrivateKeyError, .unsupportedKeyEncryption(rounds: 32))
         }
     }
 

@@ -75,7 +75,7 @@ modes are distinct and actionable:
 | Key type other than RSA/ed25519 | names the unsupported type |
 | Encrypted key, no passphrase | "protected by a passphrase, which is not supported yet" |
 | Encrypted key, wrong passphrase | "passphrase … is incorrect" |
-| Encrypted key, bcrypt rounds >= 18 | actionable message with `ssh-keygen -p -a 16` (Citadel 0.11.x limit; OpenSSH 10 defaults to 24) |
+| Encrypted key, bcrypt rounds >= 32 | actionable message with `ssh-keygen -p -a 16` |
 | RSA rejected by the server | lists the offered algorithms (`rsa-sha2-512`, `rsa-sha2-256`, `ssh-rsa`) |
 
 RSA authentication uses RFC 8332: Citadel PR #135 (pinned by revision from its
