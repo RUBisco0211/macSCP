@@ -72,26 +72,25 @@ actor SFTPSession: SFTPSessionProtocol {
     ) async throws {
         logInfo("Connecting to \(username)@\(host):\(port) with private key", category: .sftp)
 
+        // Load the key before touching the event loop so key problems surface as
+        // actionable errors instead of generic authentication failures.
+        let authMethod: SSHAuthenticationMethod
+        do {
+            authMethod = try SSHPrivateKeyLoader.authenticationMethod(
+                username: username,
+                keyPath: privateKeyPath,
+                passphrase: passphrase
+            )
+        } catch {
+            logError("Failed to load private key: \(error)", category: .sftp)
+            throw AppError.privateKeyError(error.localizedDescription)
+        }
+
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         eventLoopGroup = group
 
         do {
             let normalizedHost = (host.lowercased() == "localhost") ? "127.0.0.1" : host
-
-            // Read the private key file
-            let privateKeyURL = URL(fileURLWithPath: privateKeyPath)
-            let privateKeyData = try Data(contentsOf: privateKeyURL)
-            guard let privateKeyString = String(data: privateKeyData, encoding: .utf8) else {
-                throw AppError.authenticationFailed
-            }
-
-            // Note: Citadel's RSA private key init doesn't support passphrase directly
-            // For passphrase-protected keys, they need to be decrypted first or use OpenSSH format
-            // The library expects unencrypted PEM or OpenSSH format keys
-            let authMethod: SSHAuthenticationMethod = try .rsa(
-                username: username,
-                privateKey: .init(sshRsa: privateKeyString)
-            )
 
             client = try await SSHClient.connect(
                 host: normalizedHost,

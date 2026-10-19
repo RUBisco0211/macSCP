@@ -88,6 +88,23 @@ struct ConnectionListView: View {
                 }
             )
         }
+        .sheet(isPresented: $viewModel.isShowingImportSheet, onDismiss: {
+            viewModel.cancelImport()
+        }) {
+            if let importViewModel = viewModel.sshConfigImportViewModel {
+                SSHConfigImportSheet(
+                    viewModel: importViewModel,
+                    onImport: { connections in
+                        Task {
+                            await viewModel.importConnections(connections)
+                        }
+                    },
+                    onCancel: {
+                        viewModel.cancelImport()
+                    }
+                )
+            }
+        }
         .sheet(isPresented: $viewModel.isShowingEditConnectionSheet) {
             if let connection = viewModel.connectionToEdit {
                 ConnectionFormSheet(

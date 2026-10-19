@@ -101,6 +101,19 @@ actor TerminalSession: TerminalSessionProtocol {
     ) async throws {
         logInfo("Connecting terminal to \(username)@\(host):\(port) with private key", category: .network)
 
+        // Load the key first so unsupported/encrypted keys fail with a clear message.
+        let authMethod: SSHAuthenticationMethod
+        do {
+            authMethod = try SSHPrivateKeyLoader.authenticationMethod(
+                username: username,
+                keyPath: privateKeyPath,
+                passphrase: passphrase
+            )
+        } catch {
+            logError("Failed to load private key: \(error)", category: .network)
+            throw AppError.privateKeyError(error.localizedDescription)
+        }
+
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         eventLoopGroup = group
         currentSize = terminalSize
@@ -108,17 +121,6 @@ actor TerminalSession: TerminalSessionProtocol {
 
         do {
             let normalizedHost = (host.lowercased() == "localhost") ? "127.0.0.1" : host
-
-            let privateKeyURL = URL(fileURLWithPath: privateKeyPath)
-            let privateKeyData = try Data(contentsOf: privateKeyURL)
-            guard let privateKeyString = String(data: privateKeyData, encoding: .utf8) else {
-                throw AppError.authenticationFailed
-            }
-
-            let authMethod: SSHAuthenticationMethod = try .rsa(
-                username: username,
-                privateKey: .init(sshRsa: privateKeyString)
-            )
 
             client = try await SSHClient.connect(
                 host: normalizedHost,

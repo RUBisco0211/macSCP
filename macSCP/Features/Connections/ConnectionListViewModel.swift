@@ -32,6 +32,10 @@ final class ConnectionListViewModel {
     var isShowingNewFolderSheet = false
     var isShowingPasswordPrompt = false
     var isShowingDeleteFolderAlert = false
+    var isShowingImportSheet = false
+
+    // SSH config import
+    var sshConfigImportViewModel: SSHConfigImportViewModel?
 
     // Editing state
     var connectionToEdit: Connection?
@@ -435,6 +439,43 @@ final class ConnectionListViewModel {
         openTerminal(for: connection, password: password)
         isShowingPasswordPrompt = false
         connectionToConnect = nil
+    }
+
+    // MARK: - SSH Config Import
+
+    func beginImport() {
+        sshConfigImportViewModel = SSHConfigImportViewModel()
+        isShowingImportSheet = true
+    }
+
+    func cancelImport() {
+        isShowingImportSheet = false
+        sshConfigImportViewModel = nil
+    }
+
+    func importConnections(_ connections: [Connection]) async {
+        guard !connections.isEmpty else { return }
+
+        do {
+            for connection in connections {
+                try await connectionRepository.save(connection)
+            }
+
+            await loadData()
+
+            // Imported connections live at the root, so make sure they are visible.
+            selectedSidebarItem = .allConnections
+            selectedConnectionId = connections.first?.id
+
+            isShowingImportSheet = false
+            sshConfigImportViewModel = nil
+
+            AnalyticsService.trackConnectionCreated(protocol: .sftp)
+            logInfo("Imported \(connections.count) connection(s) from ssh config", category: .database)
+        } catch {
+            logError("Failed to import connections: \(error)", category: .database)
+            self.error = AppError.from(error)
+        }
     }
 
     // MARK: - Edit Actions

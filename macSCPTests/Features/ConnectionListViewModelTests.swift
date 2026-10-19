@@ -178,4 +178,39 @@ final class ConnectionListViewModelTests: XCTestCase {
         XCTAssertEqual(sut.connectionCount(for: folder.id), 2)
         XCTAssertEqual(sut.totalConnectionCount, 3)
     }
+
+    // MARK: - SSH Config Import Tests
+
+    func testImportConnections_PersistsAllAndSelectsFirst() async {
+        // Given
+        let imported = [
+            Connection(name: "alpha", host: "alpha.example.com", username: "alice"),
+            Connection(name: "beta", host: "beta.example.com", username: "bob")
+        ]
+
+        // When
+        await sut.importConnections(imported)
+
+        // Then
+        XCTAssertEqual(mockConnectionRepository.mockConnections.count, 2)
+        XCTAssertEqual(mockConnectionRepository.mockConnections.map(\.name), ["alpha", "beta"])
+        XCTAssertEqual(sut.connections.count, 2)
+        XCTAssertEqual(sut.selectedConnectionId, imported.first?.id)
+        XCTAssertFalse(sut.isShowingImportSheet)
+        XCTAssertNil(sut.sshConfigImportViewModel)
+    }
+
+    func testImportConnections_ReportsSaveFailure() async {
+        // Given
+        mockConnectionRepository.mockError = AppError.saveFailed("connection")
+
+        // When
+        await sut.importConnections([
+            Connection(name: "alpha", host: "alpha.example.com", username: "alice")
+        ])
+
+        // Then
+        XCTAssertNotNil(sut.error)
+        XCTAssertTrue(mockConnectionRepository.mockConnections.isEmpty)
+    }
 }

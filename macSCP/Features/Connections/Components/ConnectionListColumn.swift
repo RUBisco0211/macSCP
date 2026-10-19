@@ -42,6 +42,13 @@ struct ConnectionListColumn: View {
                     Label("New Connection", systemImage: "square.and.pencil")
                 }
                 .help("New Connection")
+
+                Button {
+                    viewModel.beginImport()
+                } label: {
+                    Label("Import from ~/.ssh/config", systemImage: "square.and.arrow.down")
+                }
+                .help("Import from ~/.ssh/config")
             }
         }
     }
