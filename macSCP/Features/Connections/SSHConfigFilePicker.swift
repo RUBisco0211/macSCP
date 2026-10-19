@@ -20,7 +20,7 @@ enum SSHConfigFilePicker {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.prompt = "Import"
-        panel.message = "Select the ssh config file to import. Only this file is read; Include directives are skipped."
+        panel.message = "Select the ssh config file to import."
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".ssh", isDirectory: true)
 
