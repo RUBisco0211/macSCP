@@ -32,10 +32,6 @@ final class ConnectionListViewModel {
     var isShowingNewFolderSheet = false
     var isShowingPasswordPrompt = false
     var isShowingDeleteFolderAlert = false
-    var isShowingImportSheet = false
-
-    // SSH config import
-    var sshConfigImportViewModel: SSHConfigImportViewModel?
 
     // Editing state
     var connectionToEdit: Connection?
@@ -443,50 +439,55 @@ final class ConnectionListViewModel {
 
     // MARK: - SSH Config Import
 
-    func beginImport() {
-        // App Sandbox: the user has to pick the config file; it is the only file
-        // the app is allowed to read, so Include directives are not followed.
+    /// Parses a user-selected ssh_config file and stores its hosts.
+    func importSSHConfig() async {
         guard let configURL = SSHConfigFilePicker.pickConfigFile() else { return }
 
-        sshConfigImportViewModel = SSHConfigImportViewModel(configURL: configURL)
-        isShowingImportSheet = true
+        let entries: [SSHConfigEntry]
+        do {
+            entries = try SSHConfigParser().parse(configURL: configURL)
+        } catch {
+            logError("Failed to parse ssh_config: \(error)", category: .database)
+            self.error = AppError.from(error)
+            return
+        }
+
+        await importConnections(SSHConfigImporter.connections(from: entries))
     }
 
-    func cancelImport() {
-        isShowingImportSheet = false
-        sshConfigImportViewModel = nil
-    }
-
-    func importConnections(_ connections: [Connection]) async {
-        guard !connections.isEmpty else { return }
-
-        var savedConnections: [Connection] = []
+    /// Saves candidates that are not already stored, matched on
+    /// `host|port|username`.
+    func importConnections(_ candidates: [Connection]) async {
+        guard !candidates.isEmpty else { return }
 
         do {
-            for connection in connections {
+            let existing = try await connectionRepository.fetchAll()
+            var knownKeys = Set(existing.map(SSHConfigImporter.deduplicationKey(for:)))
+            let newConnections = candidates.filter { connection in
+                knownKeys.insert(SSHConfigImporter.deduplicationKey(for: connection)).inserted
+            }
+
+            for connection in newConnections {
                 try await connectionRepository.save(connection)
-                savedConnections.append(connection)
             }
 
             await loadData()
 
             // Imported connections live at the root, so make sure they are visible.
             selectedSidebarItem = .allConnections
-            selectedConnectionId = connections.first?.id
-
-            isShowingImportSheet = false
-            sshConfigImportViewModel = nil
-
-            AnalyticsService.trackConnectionCreated(protocol: .sftp)
-            logInfo("Imported \(connections.count) connection(s) from ssh config", category: .database)
-        } catch {
-            // Keep the sheet open and drop the rows that were already saved, so a
-            // retry does not submit them a second time.
-            await loadData()
-            for connection in savedConnections {
-                sshConfigImportViewModel?.setSelected(false, forAlias: connection.name)
+            if let firstImported = newConnections.first {
+                selectedConnectionId = firstImported.id
             }
-            logError("Failed to import connections: \(error)", category: .database)
+
+            if !newConnections.isEmpty {
+                AnalyticsService.trackConnectionCreated(protocol: .sftp)
+            }
+            logInfo(
+                "Imported \(newConnections.count) of \(candidates.count) host(s) from ssh_config",
+                category: .database
+            )
+        } catch {
+            logError("Failed to import ssh_config: \(error)", category: .database)
             self.error = AppError.from(error)
         }
     }

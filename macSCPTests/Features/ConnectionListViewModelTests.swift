@@ -192,15 +192,49 @@ final class ConnectionListViewModelTests: XCTestCase {
         await sut.importConnections(imported)
 
         // Then
-        XCTAssertEqual(mockConnectionRepository.mockConnections.count, 2)
         XCTAssertEqual(mockConnectionRepository.mockConnections.map(\.name), ["alpha", "beta"])
         XCTAssertEqual(sut.connections.count, 2)
         XCTAssertEqual(sut.selectedConnectionId, imported.first?.id)
-        XCTAssertFalse(sut.isShowingImportSheet)
-        XCTAssertNil(sut.sshConfigImportViewModel)
     }
 
-    func testImportConnections_ReportsSaveFailure() async {
+    func testImportConnections_SkipsHostsAlreadyStored() async {
+        // Given: one of the imported hosts already exists under another name
+        let existing = Connection(
+            name: "my existing host",
+            host: "alpha.example.com",
+            port: 22,
+            username: "alice"
+        )
+        mockConnectionRepository.mockConnections = [existing]
+
+        let candidates = [
+            Connection(name: "alpha", host: "alpha.example.com", port: 22, username: "alice"),
+            Connection(name: "beta", host: "beta.example.com", port: 22, username: "bob")
+        ]
+
+        // When
+        await sut.importConnections(candidates)
+
+        // Then: only beta is stored; the alias of the existing connection is kept
+        XCTAssertEqual(mockConnectionRepository.mockConnections.map(\.name), ["my existing host", "beta"])
+        XCTAssertNil(sut.error)
+    }
+
+    func testImportConnections_DeduplicatesWithinTheBatch() async {
+        // Given: two aliases pointing at the same host|port|username
+        let candidates = [
+            Connection(name: "first alias", host: "lab.example.com", port: 1185, username: "deploy"),
+            Connection(name: "second alias", host: "lab.example.com", port: 1185, username: "deploy")
+        ]
+
+        // When
+        await sut.importConnections(candidates)
+
+        // Then
+        XCTAssertEqual(mockConnectionRepository.mockConnections.map(\.name), ["first alias"])
+    }
+
+    func testImportConnections_ReportsFailureAndSavesNothing() async {
         // Given
         mockConnectionRepository.mockError = AppError.saveFailed("connection")
 
@@ -212,35 +246,5 @@ final class ConnectionListViewModelTests: XCTestCase {
         // Then
         XCTAssertNotNil(sut.error)
         XCTAssertTrue(mockConnectionRepository.mockConnections.isEmpty)
-    }
-
-    func testImportConnections_PartialFailureDeselectsSavedRowsAndKeepsSheetOpen() async {
-        // Given: a preview with two rows
-        let configURL = URL(fileURLWithPath: "/Users/test/.ssh/config")
-        let parser = SSHConfigParser(
-            reader: StubSSHConfigReader(files: [configURL.path: "Host alpha\nHost beta\n"]),
-            options: SSHConfigParseOptions(homeDirectory: "/Users/test"),
-            fileExists: { _ in true }
-        )
-        let importViewModel = SSHConfigImportViewModel(
-            configURL: configURL,
-            parser: parser,
-            defaultUsername: "tester"
-        )
-        await importViewModel.load()
-
-        sut.sshConfigImportViewModel = importViewModel
-        sut.isShowingImportSheet = true
-        mockConnectionRepository.failSaveOnCall = 2
-
-        // When
-        await sut.importConnections(importViewModel.selectedConnections)
-
-        // Then: the first connection stayed saved, the sheet is still open, and only
-        // the failed row remains selected for a retry.
-        XCTAssertEqual(mockConnectionRepository.mockConnections.map(\.name), ["alpha"])
-        XCTAssertNotNil(sut.error)
-        XCTAssertTrue(sut.isShowingImportSheet)
-        XCTAssertEqual(importViewModel.selectedConnections.map(\.name), ["beta"])
     }
 }

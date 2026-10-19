@@ -2,11 +2,10 @@
 //  SSHConfigFilePicker.swift
 //  macSCP
 //
-//  Sandbox-friendly file selection for the ssh config import.
+//  File selection for the ssh_config import.
 //
-//  The app is sandboxed, so `~/.ssh/config` can only be read after the user
-//  explicitly picks it. The panel navigates straight to `~/.ssh` to keep that
-//  one click short.
+//  The app never assumes a location: the user picks the file, and that choice is
+//  the only input the importer uses.
 //
 
 import AppKit
@@ -20,9 +19,7 @@ enum SSHConfigFilePicker {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.prompt = "Import"
-        panel.message = "Select the ssh config file to import."
-        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".ssh", isDirectory: true)
+        panel.message = "Select the ssh_config file to import."
 
         guard panel.runModal() == .OK else { return nil }
         return panel.url

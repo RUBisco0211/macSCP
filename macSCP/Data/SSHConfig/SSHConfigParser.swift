@@ -2,20 +2,17 @@
 //  SSHConfigParser.swift
 //  macSCP
 //
-//  Minimal ssh_config reader for the "Import from ~/.ssh/config" feature.
+//  Minimal ssh_config reader used by the import feature.
 //
-//  Scope: enough of ssh_config(5) to turn Host blocks into concrete connections.
-//  Deliberately out of scope: Match criteria, Include, ProxyJump/ProxyCommand
-//  execution, port forwarding, canonicalisation, and host key options.
-//
-//  The app runs inside App Sandbox, so only the file the user selected is read.
-//  `Include` directives are reported as a warning and skipped; referenced files
-//  are never opened.
+//  The user picks the file, so the parser only reads that file. `Include` is
+//  ignored, unsupported directives are ignored, and nothing is surfaced as a
+//  warning: the goal is a list of usable hosts, not a diagnostics report.
 //
 //  Supported: Host (multiple aliases, `*`/`?` patterns, `!` negation), HostName,
-//  User, Port, IdentityFile (ordered), `Keyword=value` syntax, `#` comments,
-//  quoted values, and %h/%r/%p/%d/%u/%% token expansion. Resolution uses ssh's
-//  first-obtained-value-wins rule across blocks in file order.
+//  User, Port, IdentityFile (first one, resolved to an absolute path),
+//  `Keyword=value` syntax, `#` comments, quoted values, and %h/%r/%p/%d/%u/%%
+//  token expansion. Resolution uses ssh's first-obtained-value-wins rule across
+//  blocks in file order.
 //
 
 import Foundation
@@ -39,17 +36,8 @@ enum SSHConfigError: LocalizedError, Sendable {
     var errorDescription: String? {
         switch self {
         case let .unreadableFile(path, reason):
-            return "Cannot read SSH config at \(path): \(reason)"
+            return "Cannot read the ssh_config file at \(path): \(reason)"
         }
-    }
-}
-
-struct SSHConfigParseOptions: Sendable {
-    /// Used for `~` and `%d` expansion. Configurable so tests are hermetic.
-    var homeDirectory: String
-
-    init(homeDirectory: String = NSHomeDirectory()) {
-        self.homeDirectory = homeDirectory
     }
 }
 
@@ -57,66 +45,47 @@ struct SSHConfigParseOptions: Sendable {
 
 struct SSHConfigParser: Sendable {
     private let reader: any SSHConfigReading
-    private let options: SSHConfigParseOptions
-    private let fileExists: @Sendable (String) -> Bool
+    private let homeDirectory: String
 
     init(
         reader: any SSHConfigReading = FileSystemSSHConfigReader(),
-        options: SSHConfigParseOptions = SSHConfigParseOptions(),
-        fileExists: @escaping @Sendable (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }
+        homeDirectory: String = FileManager.default.homeDirectoryForCurrentUser.path
     ) {
         self.reader = reader
-        self.options = options
-        self.fileExists = fileExists
+        self.homeDirectory = homeDirectory
     }
 
-    // MARK: Entry Point
-
-    func parse(configURL: URL) throws -> SSHConfigParseResult {
-        var state = State()
-        var currentSection: Int?
-
-        let path = configURL.standardizedFileURL.path
+    /// Parses the file at `configURL` into concrete hosts.
+    func parse(configURL: URL) throws -> [SSHConfigEntry] {
         let text: String
         do {
             text = try reader.read(contentsOf: configURL)
         } catch {
-            throw SSHConfigError.unreadableFile(path: path, reason: error.localizedDescription)
+            throw SSHConfigError.unreadableFile(
+                path: configURL.standardizedFileURL.path,
+                reason: error.localizedDescription
+            )
         }
 
-        parse(text: text, path: path, currentSection: &currentSection, state: &state)
-
-        return SSHConfigParseResult(
-            entries: materialize(state: &state),
-            warnings: state.warnings,
-            sourcePaths: [path]
-        )
+        let configDirectory = configURL.deletingLastPathComponent().standardizedFileURL.path
+        let sections = sections(from: text)
+        return materialize(sections: sections, configDirectory: configDirectory)
     }
 
-    // MARK: Parsing State
+    // MARK: Block collection
 
     private struct Section {
         var patterns: [String]
         var values: [String: [String]]
-        /// True for `Match` blocks: parsed for structure, never resolved.
+        /// True for `Match` blocks: collected for structure, never resolved.
         var isMatch: Bool
     }
 
-    private struct State {
-        /// Ordered blocks, exactly as they appear in the file. Global directives
-        /// become `*` blocks at the position where they occur.
+    private func sections(from text: String) -> [Section] {
         var sections: [Section] = []
-        var warnings: [SSHConfigWarning] = []
-    }
+        var currentSection: Int?
 
-    private func parse(
-        text: String,
-        path: String,
-        currentSection: inout Int?,
-        state: inout State
-    ) {
-        let lines = text.components(separatedBy: .newlines)
-        for (offset, rawLine) in lines.enumerated() {
+        for rawLine in text.components(separatedBy: .newlines) {
             var tokens = Self.lex(rawLine)
             guard !tokens.isEmpty else { continue }
 
@@ -137,72 +106,55 @@ struct SSHConfigParser: Sendable {
 
             switch key.lowercased() {
             case "host":
-                guard !tokens.isEmpty else {
-                    state.warnings.append(.malformedLine(path: path, line: offset + 1, content: rawLine))
-                    continue
-                }
-                state.sections.append(Section(patterns: tokens, values: [:], isMatch: false))
-                currentSection = state.sections.count - 1
+                guard !tokens.isEmpty else { continue }
+                sections.append(Section(patterns: tokens, values: [:], isMatch: false))
+                currentSection = sections.count - 1
 
             case "match":
-                // Recognised so that following directives are not attributed to
-                // the previous Host block, then ignored entirely.
-                state.sections.append(Section(patterns: [], values: [:], isMatch: true))
-                currentSection = state.sections.count - 1
+                // Keep following directives out of the previous Host block.
+                sections.append(Section(patterns: [], values: [:], isMatch: true))
+                currentSection = sections.count - 1
 
             case "include":
-                // Sandboxed builds only read the file the user picked, so an
-                // Include cannot be followed. Report it instead of silently
-                // dropping the hosts it would have contributed.
-                let targets = tokens.joined(separator: " ")
-                state.warnings.append(.includeSkipped(targets))
+                // Only the selected file is read; included files are not opened.
+                continue
 
             default:
                 let value = tokens.joined(separator: " ")
-                guard !value.isBlank else {
-                    state.warnings.append(.malformedLine(path: path, line: offset + 1, content: rawLine))
-                    continue
-                }
+                guard !value.isBlank else { continue }
                 // Directives outside a Host/Match block are global defaults.
                 if currentSection == nil {
-                    state.sections.append(Section(patterns: ["*"], values: [:], isMatch: false))
-                    currentSection = state.sections.count - 1
+                    sections.append(Section(patterns: ["*"], values: [:], isMatch: false))
+                    currentSection = sections.count - 1
                 }
-                state.sections[currentSection!].values[key.lowercased(), default: []].append(value)
+                sections[currentSection!].values[key.lowercased(), default: []].append(value)
             }
         }
+
+        return sections
     }
 
     // MARK: Resolution
 
-    private func materialize(state: inout State) -> [SSHConfigEntry] {
-        let sections = state.sections
+    private func materialize(sections: [Section], configDirectory: String) -> [SSHConfigEntry] {
+        var aliases: [String] = []
+        var seen: Set<String> = []
 
-        var aliasOrder: [String] = []
-        var seenAliases: Set<String> = []
         for section in sections where !section.isMatch {
-            for pattern in section.patterns {
-                if pattern.hasPrefix("!") { continue }
-                guard Self.isLiteral(pattern) else {
-                    // `Host *` is the conventional defaults block: it contributes
-                    // values via resolution but is not an importable connection.
-                    if pattern != "*" {
-                        state.warnings.append(.wildcardHostSkipped(pattern))
-                    }
-                    continue
-                }
-                if seenAliases.insert(pattern.lowercased()).inserted {
-                    aliasOrder.append(pattern)
+            for pattern in section.patterns where !pattern.hasPrefix("!") && Self.isLiteral(pattern) {
+                if seen.insert(pattern.lowercased()).inserted {
+                    aliases.append(pattern)
                 }
             }
         }
 
-        var entries: [SSHConfigEntry] = []
-        for alias in aliasOrder {
-            let resolved = resolve(alias: alias, sections: sections)
-            entries.append(makeEntry(alias: alias, resolved: resolved, state: &state))
+        return aliases.map { alias in
+            makeEntry(
+                alias: alias,
+                resolved: resolve(alias: alias, sections: sections),
+                configDirectory: configDirectory
+            )
         }
-        return entries
     }
 
     /// ssh semantics: the first value obtained for a keyword wins, scanning
@@ -227,7 +179,7 @@ struct SSHConfigParser: Sendable {
     private func makeEntry(
         alias: String,
         resolved: [String: [String]],
-        state: inout State
+        configDirectory: String
     ) -> SSHConfigEntry {
         let portValue = resolved["port"]?.first
         let portString = portValue ?? String(AppConstants.defaultSSHPort)
@@ -247,35 +199,18 @@ struct SSHConfigParser: Sendable {
         }
 
         var port = AppConstants.defaultSSHPort
-        if let rawPort = portValue {
-            if let parsed = Int(rawPort.trimmed), (1...65535).contains(parsed) {
-                port = parsed
-            } else {
-                state.warnings.append(.invalidPort(alias: alias, value: rawPort))
-            }
+        if let rawPort = portValue, let parsed = Int(rawPort.trimmed), (1...65535).contains(parsed) {
+            port = parsed
         }
 
-        var identityFiles: [String] = []
-        for rawPath in resolved["identityfile"] ?? [] {
-            let expanded = expandTilde(
-                expandTokens(rawPath, host: hostName, user: user ?? localUser, port: portString)
+        var identityFile: String?
+        if let rawPath = resolved["identityfile"]?.first {
+            let expanded = expandTokens(rawPath, host: hostName, user: user ?? localUser, port: portString)
+            identityFile = Self.absolutePath(
+                expanded,
+                configDirectory: configDirectory,
+                homeDirectory: homeDirectory
             )
-            guard !identityFiles.contains(expanded) else { continue }
-            identityFiles.append(expanded)
-            if !fileExists(expanded) {
-                state.warnings.append(.identityFileUnavailable(alias: alias, path: expanded))
-            }
-        }
-
-        let unsupported = Self.connectivityDirectives
-            .filter { key in
-                guard let value = resolved[key]?.first else { return false }
-                return value.lowercased() != "none"
-            }
-            .sorted()
-
-        for directive in unsupported {
-            state.warnings.append(.unsupportedDirective(alias: alias, directive: directive))
         }
 
         return SSHConfigEntry(
@@ -283,21 +218,26 @@ struct SSHConfigParser: Sendable {
             hostName: hostName,
             user: user,
             port: port,
-            identityFiles: identityFiles,
-            unsupportedDirectives: unsupported
+            identityFile: identityFile
         )
     }
 
     // MARK: Tokens
 
-    private func expandTilde(_ path: String) -> String {
+    /// Makes a possibly relative path absolute so it stays valid when the key is
+    /// read at connection time.
+    static func absolutePath(_ path: String, configDirectory: String, homeDirectory: String) -> String {
+        let expanded: String
         if path == "~" {
-            return options.homeDirectory
+            expanded = homeDirectory
+        } else if path.hasPrefix("~/") {
+            expanded = homeDirectory + String(path.dropFirst())
+        } else if path.hasPrefix("/") {
+            expanded = path
+        } else {
+            expanded = configDirectory.appendingPathComponent(path)
         }
-        if path.hasPrefix("~/") {
-            return options.homeDirectory + String(path.dropFirst())
-        }
-        return path
+        return URL(fileURLWithPath: expanded).standardizedFileURL.path
     }
 
     /// Expands ssh's percent tokens. Unknown tokens are passed through unchanged.
@@ -317,7 +257,7 @@ struct SSHConfigParser: Sendable {
             case "h": output += host
             case "r": output += user
             case "p": output += port
-            case "d": output += options.homeDirectory
+            case "d": output += homeDirectory
             case "u": output += NSUserName()
             case "%": output += "%"
             default:
@@ -387,16 +327,6 @@ struct SSHConfigParser: Sendable {
     }
 
     // MARK: Pattern Matching
-
-    /// Directives that change how a connection behaves but are not modelled by
-    /// macSCP. Presence means the imported profile is not wire-equivalent.
-    private static let connectivityDirectives: Set<String> = [
-        "proxyjump",
-        "proxycommand",
-        "localforward",
-        "remoteforward",
-        "dynamicforward"
-    ]
 
     private static func isLiteral(_ pattern: String) -> Bool {
         !pattern.contains("*") && !pattern.contains("?") && !pattern.contains("[")

@@ -16,15 +16,14 @@ final class SSHConfigImporterTests: XCTestCase {
         hostName: String = "lab.example.com",
         user: String? = "deploy",
         port: Int = 1185,
-        identityFiles: [String] = ["/Users/test/.ssh/id_rsa"]
+        identityFile: String? = "/Users/test/.ssh/id_rsa"
     ) -> SSHConfigEntry {
         SSHConfigEntry(
             alias: alias,
             hostName: hostName,
             user: user,
             port: port,
-            identityFiles: identityFiles,
-            unsupportedDirectives: []
+            identityFile: identityFile
         )
     }
 
@@ -45,16 +44,25 @@ final class SSHConfigImporterTests: XCTestCase {
         XCTAssertEqual(connection.authMethod, .privateKey)
         XCTAssertEqual(connection.privateKeyPath, "/Users/test/.ssh/id_rsa")
         XCTAssertFalse(connection.savePassword)
-        XCTAssertEqual(connection.tags, ["ssh-config"])
-        XCTAssertNil(connection.folderId)
         XCTAssertEqual(connection.connectionType, .sftp)
         XCTAssertEqual(connection.createdAt, now)
         XCTAssertTrue(connection.isValid)
     }
 
+    func testDoesNotPrefillUserOwnedFields() throws {
+        let connection = try XCTUnwrap(
+            SSHConfigImporter.connections(from: [entry()], now: now).first
+        )
+
+        XCTAssertTrue(connection.tags.isEmpty)
+        XCTAssertNil(connection.description)
+        XCTAssertNil(connection.folderId)
+        XCTAssertEqual(connection.iconName, "server.rack")
+    }
+
     func testFallsBackToPasswordAuthAndDefaultUsername() throws {
         let connections = SSHConfigImporter.connections(
-            from: [entry(user: nil, identityFiles: [])],
+            from: [entry(user: nil, identityFile: nil)],
             defaultUsername: "fallback",
             now: now
         )
@@ -66,27 +74,29 @@ final class SSHConfigImporterTests: XCTestCase {
         XCTAssertTrue(connection.isValid)
     }
 
-    func testImportsEveryEntryWithoutDeduplication() {
-        let connections = SSHConfigImporter.connections(
-            from: [
-                entry(alias: "lab-host"),
-                entry(alias: "lab-host-codex")
-            ],
-            defaultUsername: "fallback",
-            now: now
+    // MARK: - Deduplication key
+
+    func testDeduplicationKeyCombinesHostPortAndUsername() {
+        let connection = Connection(
+            name: "lab",
+            host: "Lab.Example.com",
+            port: 1185,
+            username: "Deploy"
         )
 
-        XCTAssertEqual(connections.map(\.name), ["lab-host", "lab-host-codex"])
+        XCTAssertEqual(
+            SSHConfigImporter.deduplicationKey(for: connection),
+            "lab.example.com|1185|deploy"
+        )
     }
 
-    func testUsesProvidedFolderWhenRequested() {
-        let folderId = UUID()
-        let connections = SSHConfigImporter.connections(
-            from: [entry()],
-            folderId: folderId,
-            now: now
-        )
+    func testDeduplicationKeyIgnoresTheAlias() {
+        let first = Connection(name: "one", host: "lab.example.com", port: 22, username: "deploy")
+        let second = Connection(name: "two", host: "lab.example.com", port: 22, username: "deploy")
 
-        XCTAssertEqual(connections.first?.folderId, folderId)
+        XCTAssertEqual(
+            SSHConfigImporter.deduplicationKey(for: first),
+            SSHConfigImporter.deduplicationKey(for: second)
+        )
     }
 }

@@ -44,11 +44,13 @@ struct ConnectionListColumn: View {
                 .help("New Connection")
 
                 Button {
-                    viewModel.beginImport()
+                    Task {
+                        await viewModel.importSSHConfig()
+                    }
                 } label: {
                     Label("Import", systemImage: "doc.badge.plus")
                 }
-                .help("Import hosts from an SSH config file")
+                .help("Import hosts from an ssh_config file")
             }
         }
     }
