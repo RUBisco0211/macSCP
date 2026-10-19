@@ -5,18 +5,20 @@
 //  Minimal ssh_config reader for the "Import from ~/.ssh/config" feature.
 //
 //  Scope: enough of ssh_config(5) to turn Host blocks into concrete connections.
-//  Deliberately out of scope: Match criteria, ProxyJump/ProxyCommand execution,
-//  port forwarding, canonicalisation, and host key options.
+//  Deliberately out of scope: Match criteria, Include, ProxyJump/ProxyCommand
+//  execution, port forwarding, canonicalisation, and host key options.
+//
+//  The app runs inside App Sandbox, so only the file the user selected is read.
+//  `Include` directives are reported as a warning and skipped; referenced files
+//  are never opened.
 //
 //  Supported: Host (multiple aliases, `*`/`?` patterns, `!` negation), HostName,
-//  User, Port, IdentityFile (ordered), Include (recursive, glob, cycle-safe),
-//  `Keyword=value` syntax, `#` comments, quoted values, and %h/%r/%p/%d/%u/%% token
-//  expansion. Resolution uses ssh's first-obtained-value-wins rule across blocks
-//  in file order.
+//  User, Port, IdentityFile (ordered), `Keyword=value` syntax, `#` comments,
+//  quoted values, and %h/%r/%p/%d/%u/%% token expansion. Resolution uses ssh's
+//  first-obtained-value-wins rule across blocks in file order.
 //
 
 import Foundation
-import Darwin
 
 // MARK: - Reading
 
@@ -45,11 +47,9 @@ enum SSHConfigError: LocalizedError, Sendable {
 struct SSHConfigParseOptions: Sendable {
     /// Used for `~` and `%d` expansion. Configurable so tests are hermetic.
     var homeDirectory: String
-    var maxIncludeDepth: Int
 
-    init(homeDirectory: String = NSHomeDirectory(), maxIncludeDepth: Int = 8) {
+    init(homeDirectory: String = NSHomeDirectory()) {
         self.homeDirectory = homeDirectory
-        self.maxIncludeDepth = maxIncludeDepth
     }
 }
 
@@ -59,18 +59,15 @@ struct SSHConfigParser: Sendable {
     private let reader: any SSHConfigReading
     private let options: SSHConfigParseOptions
     private let fileExists: @Sendable (String) -> Bool
-    private let includeExpander: @Sendable (String) -> [String]
 
     init(
         reader: any SSHConfigReading = FileSystemSSHConfigReader(),
         options: SSHConfigParseOptions = SSHConfigParseOptions(),
-        fileExists: @escaping @Sendable (String) -> Bool = { FileManager.default.fileExists(atPath: $0) },
-        includeExpander: @escaping @Sendable (String) -> [String] = SSHConfigParser.expandGlobs
+        fileExists: @escaping @Sendable (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }
     ) {
         self.reader = reader
         self.options = options
         self.fileExists = fileExists
-        self.includeExpander = includeExpander
     }
 
     // MARK: Entry Point
@@ -78,21 +75,21 @@ struct SSHConfigParser: Sendable {
     func parse(configURL: URL) throws -> SSHConfigParseResult {
         var state = State()
         var currentSection: Int?
-        // ssh resolves relative Include paths against the user config directory
-        // (`~/.ssh`), not against the process working directory.
-        let configDirectory = configURL.deletingLastPathComponent().standardizedFileURL
-        try load(
-            url: configURL,
-            depth: 0,
-            stack: [],
-            configDirectory: configDirectory,
-            currentSection: &currentSection,
-            state: &state
-        )
+
+        let path = configURL.standardizedFileURL.path
+        let text: String
+        do {
+            text = try reader.read(contentsOf: configURL)
+        } catch {
+            throw SSHConfigError.unreadableFile(path: path, reason: error.localizedDescription)
+        }
+
+        parse(text: text, path: path, currentSection: &currentSection, state: &state)
+
         return SSHConfigParseResult(
             entries: materialize(state: &state),
             warnings: state.warnings,
-            sourcePaths: state.sourcePaths
+            sourcePaths: [path]
         )
     }
 
@@ -106,38 +103,18 @@ struct SSHConfigParser: Sendable {
     }
 
     private struct State {
-        /// Ordered blocks, exactly as they appear in the (included) files.
-        /// Global directives become `*` blocks at the position where they occur,
-        /// so content spliced in by an earlier Include still precedes them.
+        /// Ordered blocks, exactly as they appear in the file. Global directives
+        /// become `*` blocks at the position where they occur.
         var sections: [Section] = []
         var warnings: [SSHConfigWarning] = []
-        var sourcePaths: [String] = []
     }
 
-    // MARK: File Loading
-
-    private func load(
-        url: URL,
-        depth: Int,
-        stack: [String],
-        configDirectory: URL,
+    private func parse(
+        text: String,
+        path: String,
         currentSection: inout Int?,
         state: inout State
-    ) throws {
-        let path = url.standardizedFileURL.path
-
-        let text: String
-        do {
-            text = try reader.read(contentsOf: url)
-        } catch {
-            if depth == 0 {
-                throw SSHConfigError.unreadableFile(path: path, reason: error.localizedDescription)
-            }
-            state.warnings.append(.includeNotFound(path))
-            return
-        }
-        state.sourcePaths.append(path)
-
+    ) {
         let lines = text.components(separatedBy: .newlines)
         for (offset, rawLine) in lines.enumerated() {
             var tokens = Self.lex(rawLine)
@@ -174,39 +151,11 @@ struct SSHConfigParser: Sendable {
                 currentSection = state.sections.count - 1
 
             case "include":
-                // OpenSSH restores the parent file's active block after the
-                // include, so directives that follow it stay where they were.
-                let sectionBeforeInclude = currentSection
-                defer { currentSection = sectionBeforeInclude }
-
-                for pattern in tokens {
-                    let candidates = includeExpander(resolveIncludePattern(pattern, configDirectory: configDirectory))
-                    guard !candidates.isEmpty else {
-                        state.warnings.append(.includeNotFound(pattern))
-                        continue
-                    }
-                    for candidate in candidates {
-                        let includedURL = URL(fileURLWithPath: candidate)
-                        let includedPath = includedURL.standardizedFileURL.path
-
-                        if stack.contains(includedPath) || includedPath == path {
-                            state.warnings.append(.includeCycleSkipped(includedPath))
-                            continue
-                        }
-                        guard depth + 1 <= options.maxIncludeDepth else {
-                            state.warnings.append(.includeDepthExceeded(includedPath))
-                            continue
-                        }
-                        try load(
-                            url: includedURL,
-                            depth: depth + 1,
-                            stack: stack + [path],
-                            configDirectory: configDirectory,
-                            currentSection: &currentSection,
-                            state: &state
-                        )
-                    }
-                }
+                // Sandboxed builds only read the file the user picked, so an
+                // Include cannot be followed. Report it instead of silently
+                // dropping the hosts it would have contributed.
+                let targets = tokens.joined(separator: " ")
+                state.warnings.append(.includeSkipped(targets))
 
             default:
                 let value = tokens.joined(separator: " ")
@@ -214,9 +163,7 @@ struct SSHConfigParser: Sendable {
                     state.warnings.append(.malformedLine(path: path, line: offset + 1, content: rawLine))
                     continue
                 }
-                // Directives outside a Host/Match block are global defaults. They
-                // start a new `*` block when they appear after an Include, so they
-                // do not jump ahead of the included content.
+                // Directives outside a Host/Match block are global defaults.
                 if currentSection == nil {
                     state.sections.append(Section(patterns: ["*"], values: [:], isMatch: false))
                     currentSection = state.sections.count - 1
@@ -224,15 +171,6 @@ struct SSHConfigParser: Sendable {
                 state.sections[currentSection!].values[key.lowercased(), default: []].append(value)
             }
         }
-    }
-
-    /// Relative Include patterns are resolved against the user config directory
-    /// (`~/.ssh`), matching ssh_config(5).
-    private func resolveIncludePattern(_ pattern: String, configDirectory: URL) -> String {
-        if pattern.hasPrefix("/") || pattern.hasPrefix("~") {
-            return pattern
-        }
-        return configDirectory.appendingPathComponent(pattern).path
     }
 
     // MARK: Resolution
@@ -513,22 +451,5 @@ struct SSHConfigParser: Sendable {
             patternIndex += 1
         }
         return patternIndex == patternBytes.count
-    }
-
-    // MARK: Include Glob Expansion
-
-    /// Expands `~` and glob metacharacters for Include patterns using glob(3).
-    /// Returns an empty array when nothing matches, including when the sandbox
-    /// denies access to the containing directory.
-    static func expandGlobs(_ pattern: String) -> [String] {
-        var globResult = glob_t()
-        let status = Darwin.glob(pattern, GLOB_TILDE, nil, &globResult)
-        defer { Darwin.globfree(&globResult) }
-
-        guard status == 0, let paths = globResult.gl_pathv else { return [] }
-
-        return (0..<Int(globResult.gl_pathc)).compactMap { index in
-            paths[index].map { String(cString: $0) }
-        }
     }
 }

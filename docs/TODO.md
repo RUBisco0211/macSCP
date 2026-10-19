@@ -6,21 +6,22 @@
 
 ## 1. 已确定的决策
 
-1. **关闭 App Sandbox**（已修改 `macSCP.entitlements`）。
-   理由：沙盒下无法可靠读取 `~/.ssh/config` 与其中引用的私钥；`Include` 指向 `~/.ssh` 之外时书签方案也覆盖不到。
-   代价：不能上架 App Store（本项目本来也只走 Developer ID / DMG），且**旧版本通过沙盒容器保存的密码需要重新输入一次**（沙盒应用的钥匙串条目在容器内，关闭沙盒后读不到）。
-2. **交互**：在 New Connection 按钮旁新增导入按钮 → 点击后直接解析 `~/.ssh/config`（不再弹文件选择框）→ 弹预览 sheet（默认全选）→ Import → 写入 SwiftData → 列表刷新并选中第一条。
+1. **保留 App Sandbox**，通过用户主动选择文件来获得读取权限。
+   点击导入 → `NSOpenPanel`（默认定位到 `~/.ssh`）→ 用户选中要导入的配置文件。
+   **只解析被选中的这个文件，不跟随 `Include`**：引用到的其他配置文件不会被打开，`Include` 只产生一条告警。
+2. **交互**：在 New Connection 按钮旁新增导入按钮 → 选择文件 → 预览 sheet（默认全选）→ Import → 写入 SwiftData → 列表刷新并选中第一条。
 3. **落点**：导入到根级（`folderId = nil`），与手工创建的主机一致，不建专用文件夹。
 4. **不去重**：同一目标多别名、重复导入都会产生新条目，由用户在预览里自行取消勾选。
 5. **认证方式**：密码、RSA、ed25519 三种都要可用。带口令的私钥本阶段只给明确错误提示，口令输入留 P1。
 6. **PR**：提到 origin（`RUBisco0211/macSCP`）的 `main`，描述用中文。
-7. **数据位置**：SwiftData 主库改为 `~/Library/Application Support/macSCP/macSCP.store`。
-   首次启动自动从 SwiftData 默认的 `~/Library/Application Support/default.store` 迁移（含 `-wal`/`-shm` 边车文件）；
-   迁移失败会回滚并继续使用旧位置，避免启动不了。
+7. **数据位置**：SwiftData 主库使用应用专属文件 `.../Application Support/macSCP/macSCP.store`。
+   沙盒下该路径位于容器内（`~/Library/Containers/com.macscp.macSCP/Data/...`）。
+   首次启动仍会把同目录下 SwiftData 默认的 `default.store`（旧沙盒版本的库）迁移过来，含 `-wal`/`-shm`；
+   迁移失败会回滚并继续使用旧位置，避免启动不了。非沙盒环境下共享的 `default.store` 只有在包含 macSCP schema 时才会被采用。
 
 ## 2. 已完成
 
-- [x] `SSHConfigParser`：`Host`/`HostName`/`User`/`Port`/`IdentityFile`/`Include`、`Key=Value`、引号与注释、`%h/%r/%p/%d/%u/%%`、first-obtained-value-wins、通配与 `!` 取反、Include 防环与深度上限、`Match` 块忽略。
+- [x] `SSHConfigParser`：`Host`/`HostName`/`User`/`Port`/`IdentityFile`、`Key=Value`、引号与注释、`%h/%r/%p/%d/%u/%%`、first-obtained-value-wins、通配与 `!` 取反、`Match` 块忽略；`Include` 不跟随，只报 `includeSkipped` 告警。
 - [x] `SSHConfigEntry` + 结构化告警（含按 alias 归类，供预览逐条显示）。
 - [x] `SSHConfigImporter`：Entry → `Connection` 映射（根级、`ssh-config` 标签）。
 - [x] `SSHConfigImportViewModel` + `SSHConfigImportSheet`：预览、逐条勾选、全选/反选、Import。
@@ -28,7 +29,7 @@
 - [x] `SSHPrivateKeyLoader`：OpenSSH 头部解析判断 RSA/ed25519 与是否加密；两条会话链路共用。
 - [x] `SFTPSession` / `TerminalSession` 改用共用加载器，ed25519 可用，密钥错误可诊断（不可读 / 格式不支持 / 需要口令 / 口令错误）。
 - [x] `AppError.privateKeyError` 透传密钥错误文案。
-- [x] 关闭沙盒，删除不再需要的授权/书签服务。
+- [x] 恢复 App Sandbox（`app-sandbox` + `files.user-selected.read-write`），导入改为用户选择文件（`SSHConfigFilePicker`），解析器不再读取 Include 目标。
 - [x] 显式 SwiftData 存储路径 + 一次性迁移（`SwiftDataStoreMigrator`），避免与其他未沙盒 SwiftData 应用共用 `default.store`。
 - [x] 构建兼容性修复：`swift-async-algorithms` 1.1.1 → 1.1.7（Xcode 27/Swift 6.2 下 1.1.1 触发 region-isolation 编译错误）；测试替身 `MockSFTPSession` 从 `actor` 改为 `@MainActor final class`（项目默认 `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`，跨模块符合被隐式隔离的协议）。
 
@@ -43,7 +44,9 @@
       或自行实现 bcrypt KDF 解密。
 - [ ] `ConnectionEntity` 增加 `source` / `sourceAlias`，重复导入时更新而非新增（SwiftData 轻量迁移，需用旧库验证）。
 - [ ] 导入后 banner 提示"已导入 N 条"。
-- [ ] `Include` 跨目录失败时，提示用户可以手动把该目录加入导入范围（目前只告警跳过）。
+- [ ] 密钥文件的 security-scoped bookmark：沙盒下 `IdentityFile` 只有在本次运行期间被「Browse」授权过才能读，
+      重启后需要重新授权。建议为密钥保存书签（与连接记录关联）。
+- [ ] 如果以后需要跟随 `Include`：让用户额外授权被包含的文件/目录，再对它们做同样的选择式导入。
 
 - [ ] **RSA 认证升级到 rsa-sha2-256/512**。Citadel 0.11.1 与 0.12.1 都用 SHA-1 签名（`ssh-rsa`），
       OpenSSH 8.8+ 默认禁用该算法，实测本机服务器会拒绝。升级 Citadel 无效；
@@ -59,8 +62,9 @@
 ## 4. 验收
 
 - [x] 单测覆盖：解析语义、导入映射、预览选择、密钥类型识别、密钥错误分支、列表导入持久化。
-- [x] 编译 + 全部单元测试通过（`xcodebuild test ... -only-testing:macSCPTests`，115 个用例）。
-- [ ] 手测：真实 `~/.ssh/config` → 预览 5 条 → 全选导入 → 列表出现 5 条。
+- [x] 编译 + 全部单元测试通过（`xcodebuild test ... -only-testing:macSCPTests`）。
+- [ ] 手测：点导入 → 选择 `~/.ssh/config` → 预览 4 条（`orb` 在 `Include` 里，按设计被跳过）→ 全选导入。
+- [ ] 手测：确认预览里包含 `Include … was skipped` 告警。
 - [ ] 手测：RSA 主机连 SFTP/终端；ed25519 主机（OrbStack `orb`，需注意它依赖 `ProxyCommand`，仍不可连）连 SFTP/终端。
 - [ ] 手测：密码主机导入后连接时弹密码框。
 - [ ] 手测：带口令密钥连接时提示"需要口令"而不是笼统的认证失败。
@@ -68,9 +72,8 @@
 ## 5. 已知限制 / 坑
 
 - `HostName` 值可能带尾部空格，解析器已 trim。
-- `Include` 目标常在 `~/.ssh` 之外（OrbStack 在 `~/.orbstack/ssh/`），可读但属于另一来源；无法解析时告警跳过。
+- **`Include` 不跟随**：只读用户选中的文件，`Include` 里的主机（如 OrbStack 的 `orb`）不会导入，预览里会显示告警。
+- 沙盒下 `IdentityFile` 需要本次运行内被授权（手动 Browse）才能读取；重启后可能失效，见 P1 的密钥书签事项。
 - `ProxyCommand none` 是"显式禁用"，不误报为不支持。
 - 同一目标多别名（如 `lab-host` 与 `lab-host-codex`）只差端口转发，导入后是两个相同条目。
-- 关闭沙盒后，旧版本的沙盒钥匙串条目不可见，已保存密码需重输一次。
-- 应用不再有沙盒隔离，`~/.ssh` 内容对进程可见，需在 PR 中明确说明这是有意的权衡。
 - **RSA 密钥认证在现代服务器上大概率失败**：库只用 SHA-1 `ssh-rsa` 签名。错误提示会引导用户改用 ed25519。

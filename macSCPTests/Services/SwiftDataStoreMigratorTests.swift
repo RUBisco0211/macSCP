@@ -134,19 +134,13 @@ final class SwiftDataStoreMigratorTests: XCTestCase {
         XCTAssertEqual(DataStore.sharedDefaultStoreURL().lastPathComponent, "default.store")
     }
 
-    func testSandboxContainerStorePathUsesBundleIdentifier() {
-        let url = DataStore.sandboxContainerStoreURL(bundleIdentifier: "com.example.app")
+    func testSharedDefaultStoreSitsNextToTheAppStoreInApplicationSupport() {
+        // Inside App Sandbox both resolve into the app container, which is where
+        // pre-change builds kept their store.
+        let legacy = DataStore.sharedDefaultStoreURL()
+        let store = DataStore.applicationStoreURL()
 
-        XCTAssertTrue(url.path.contains("/Library/Containers/com.example.app/Data/Library/Application Support/"))
-        XCTAssertEqual(url.lastPathComponent, "default.store")
-    }
-
-    func testLegacyCandidatesPreferSandboxContainer() {
-        let candidates = DataStore.legacyStoreCandidates()
-
-        XCTAssertEqual(candidates.count, 2)
-        XCTAssertTrue(candidates[0].path.contains("/Library/Containers/"))
-        XCTAssertEqual(candidates[1], DataStore.sharedDefaultStoreURL())
+        XCTAssertEqual(legacy.deletingLastPathComponent().path, store.deletingLastPathComponent().deletingLastPathComponent().path)
     }
 
     // MARK: - Store identification

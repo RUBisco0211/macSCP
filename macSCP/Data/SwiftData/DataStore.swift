@@ -68,33 +68,15 @@ final class DataStore {
             .appendingPathComponent("macSCP.store", isDirectory: false)
     }
 
-    /// SwiftData's default location in the user's Application Support directory.
-    /// Shared with other non-sandboxed apps, so it is only used when it is
+    /// SwiftData's default location. Inside the App Sandbox this resolves to the
+    /// app container (`~/Library/Containers/<bundle-id>/Data/Library/Application
+    /// Support`), which is where builds that shipped before this change stored
+    /// their data. Unsandboxed builds would resolve to the user's shared
+    /// Application Support directory, so the file is only adopted when it is
     /// recognisably a macSCP database.
     nonisolated static func sharedDefaultStoreURL(fileManager: FileManager = .default) -> URL {
         applicationSupportDirectory(fileManager: fileManager)
             .appendingPathComponent("default.store", isDirectory: false)
-    }
-
-    /// Store inside the App Sandbox container of `bundleIdentifier`.
-    nonisolated static func sandboxContainerStoreURL(
-        bundleIdentifier: String,
-        fileManager: FileManager = .default
-    ) -> URL {
-        fileManager.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Containers", isDirectory: true)
-            .appendingPathComponent(bundleIdentifier, isDirectory: true)
-            .appendingPathComponent("Data/Library/Application Support", isDirectory: true)
-            .appendingPathComponent("default.store", isDirectory: false)
-    }
-
-    /// Legacy locations in priority order.
-    nonisolated static func legacyStoreCandidates(fileManager: FileManager = .default) -> [URL] {
-        let bundleIdentifier = Bundle.main.bundleIdentifier ?? "com.macscp.macSCP"
-        return [
-            sandboxContainerStoreURL(bundleIdentifier: bundleIdentifier, fileManager: fileManager),
-            sharedDefaultStoreURL(fileManager: fileManager)
-        ]
     }
 
     private nonisolated static func applicationSupportDirectory(fileManager: FileManager) -> URL {
@@ -116,32 +98,30 @@ final class DataStore {
             return preferredURL
         }
 
-        for source in legacyStoreCandidates(fileManager: fileManager) {
-            guard fileManager.fileExists(atPath: source.path) else { continue }
+        let source = sharedDefaultStoreURL(fileManager: fileManager)
+        guard fileManager.fileExists(atPath: source.path) else {
+            return nil
+        }
 
-            // The shared default.store may belong to another app. Only migrate it
-            // when the schema proves it is ours; the container path is ours by
-            // construction.
-            let isSharedDefault = source == sharedDefaultStoreURL(fileManager: fileManager)
-            if isSharedDefault, !SwiftDataStoreMigrator.looksLikeMacSCPStore(at: source, fileManager: fileManager) {
-                logWarning("Ignoring \(source.path): not a macSCP store", category: .database)
-                continue
-            }
+        // Do not adopt a database that belongs to another application.
+        guard SwiftDataStoreMigrator.looksLikeMacSCPStore(at: source, fileManager: fileManager) else {
+            logWarning("Ignoring \(source.path): not a macSCP store", category: .database)
+            return nil
+        }
 
-            do {
-                if try SwiftDataStoreMigrator.migrateIfNeeded(
-                    from: source,
-                    to: preferredURL,
-                    fileManager: fileManager
-                ) {
-                    logInfo("Migrated SwiftData store from \(source.path)", category: .database)
-                    return preferredURL
-                }
-            } catch {
-                logError("Failed to migrate SwiftData store from \(source.path): \(error)", category: .database)
-                // Keep using the source so the app still starts with its data.
-                return source
+        do {
+            if try SwiftDataStoreMigrator.migrateIfNeeded(
+                from: source,
+                to: preferredURL,
+                fileManager: fileManager
+            ) {
+                logInfo("Migrated SwiftData store from \(source.path)", category: .database)
+                return preferredURL
             }
+        } catch {
+            logError("Failed to migrate SwiftData store from \(source.path): \(error)", category: .database)
+            // Keep using the source so the app still starts with its data.
+            return source
         }
 
         return nil

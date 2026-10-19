@@ -33,13 +33,8 @@ final class SSHConfigImportViewModel {
     private let parser: SSHConfigParser
     private let defaultUsername: String
 
-    nonisolated static var defaultConfigURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".ssh/config", isDirectory: false)
-    }
-
     init(
-        configURL: URL = SSHConfigImportViewModel.defaultConfigURL,
+        configURL: URL,
         parser: SSHConfigParser = SSHConfigParser(),
         defaultUsername: String = NSUserName()
     ) {

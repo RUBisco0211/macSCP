@@ -444,7 +444,11 @@ final class ConnectionListViewModel {
     // MARK: - SSH Config Import
 
     func beginImport() {
-        sshConfigImportViewModel = SSHConfigImportViewModel()
+        // App Sandbox: the user has to pick the config file; it is the only file
+        // the app is allowed to read, so Include directives are not followed.
+        guard let configURL = SSHConfigFilePicker.pickConfigFile() else { return }
+
+        sshConfigImportViewModel = SSHConfigImportViewModel(configURL: configURL)
         isShowingImportSheet = true
     }
 

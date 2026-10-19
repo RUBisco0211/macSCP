@@ -19,33 +19,21 @@ final class SSHConfigParserTests: XCTestCase {
 
     private func makeParser(
         files: [String: String],
-        existingFiles: Set<String> = [],
-        includes: [String: [String]] = [:],
-        maxIncludeDepth: Int = 8
+        existingFiles: Set<String> = []
     ) -> SSHConfigParser {
         SSHConfigParser(
             reader: StubSSHConfigReader(files: files),
-            options: SSHConfigParseOptions(homeDirectory: home, maxIncludeDepth: maxIncludeDepth),
-            fileExists: { existingFiles.contains($0) },
-            includeExpander: { includes[$0] ?? [] }
+            options: SSHConfigParseOptions(homeDirectory: home),
+            fileExists: { existingFiles.contains($0) }
         )
     }
 
     private func parse(
         _ config: String,
-        existingFiles: Set<String> = [],
-        includes: [String: [String]] = [:],
-        extraFiles: [String: String] = [:],
-        maxIncludeDepth: Int = 8
+        existingFiles: Set<String> = []
     ) throws -> SSHConfigParseResult {
-        var files = extraFiles
-        files[configPath] = config
-        return try makeParser(
-            files: files,
-            existingFiles: existingFiles,
-            includes: includes,
-            maxIncludeDepth: maxIncludeDepth
-        ).parse(configURL: configURL)
+        try makeParser(files: [configPath: config], existingFiles: existingFiles)
+            .parse(configURL: configURL)
     }
 
     // MARK: - Field Mapping
@@ -232,67 +220,39 @@ final class SSHConfigParserTests: XCTestCase {
 
     // MARK: - Include
 
-    func testResolvesIncludeAndFlagsUnsupportedDirectives() throws {
-        let included = """
-        Host orb
-          HostName 127.0.0.1
-          Port 32222
-          User default
-          IdentityFile ~/.orbstack/ssh/id_ed25519
-          ProxyCommand '/Applications/OrbStack.app/Contents/MacOS/helper' ssh-proxy-fdpass
-        """
-
-        let result = try parse(
-            "Include ~/.orbstack/ssh/config",
-            includes: ["~/.orbstack/ssh/config": ["/Users/test/.orbstack/ssh/config"]],
-            extraFiles: ["/Users/test/.orbstack/ssh/config": included]
-        )
-
-        let entry = try XCTUnwrap(result.entries.first)
-        XCTAssertEqual(entry.alias, "orb")
-        XCTAssertEqual(entry.hostName, "127.0.0.1")
-        XCTAssertEqual(entry.port, 32222)
-        XCTAssertEqual(entry.user, "default")
-        XCTAssertEqual(entry.unsupportedDirectives, ["proxycommand"])
-        XCTAssertTrue(
-            result.warnings.contains(.identityFileUnavailable(alias: "orb", path: "/Users/test/.orbstack/ssh/id_ed25519"))
-        )
-        XCTAssertEqual(result.sourcePaths.count, 2)
-    }
-
-    func testIncludeCycleIsSkipped() throws {
-        let result = try parse(
-            "Include ~/.ssh/b",
-            includes: [
-                "~/.ssh/b": ["/Users/test/.ssh/b"],
-                "~/.ssh/config": ["/Users/test/.ssh/config"]
-            ],
-            extraFiles: ["/Users/test/.ssh/b": "Include ~/.ssh/config\n"]
-        )
-
-        XCTAssertTrue(result.warnings.contains(.includeCycleSkipped("/Users/test/.ssh/config")))
-        XCTAssertEqual(result.sourcePaths, ["/Users/test/.ssh/config", "/Users/test/.ssh/b"])
-    }
-
-    func testIncludeDepthIsCapped() throws {
-        let result = try parse(
-            "Include ~/.ssh/b",
-            includes: [
-                "~/.ssh/b": ["/Users/test/.ssh/b"],
-                "~/.ssh/c": ["/Users/test/.ssh/c"]
-            ],
-            extraFiles: ["/Users/test/.ssh/b": "Include ~/.ssh/c\n"],
-            maxIncludeDepth: 1
-        )
-
-        XCTAssertTrue(result.warnings.contains(.includeDepthExceeded("/Users/test/.ssh/c")))
-    }
-
-    func testMissingIncludeReportsWarning() throws {
-        let result = try parse("Include ~/.ssh/nowhere")
+    func testIncludeIsSkippedWithWarning() throws {
+        let result = try parse("Include ~/.orbstack/ssh/config")
 
         XCTAssertTrue(result.entries.isEmpty)
-        XCTAssertTrue(result.warnings.contains(.includeNotFound("~/.ssh/nowhere")))
+        XCTAssertTrue(result.warnings.contains(.includeSkipped("~/.orbstack/ssh/config")))
+        XCTAssertEqual(result.sourcePaths, [configPath])
+    }
+
+    func testIncludeDoesNotStealFollowingDirectives() throws {
+        let result = try parse("""
+        Include ~/.ssh/extra
+        User globaluser
+
+        Host after
+            HostName after.example.com
+        """)
+
+        let after = try XCTUnwrap(result.entries.first)
+        XCTAssertEqual(after.alias, "after")
+        XCTAssertEqual(after.user, "globaluser")
+        XCTAssertTrue(result.warnings.contains(.includeSkipped("~/.ssh/extra")))
+    }
+
+    func testHostsInIncludedFileAreNotImported() throws {
+        // Only the selected file is read; the parser must not try to open the
+        // Include target even when it exists on disk.
+        let result = try parse("""
+        Include /Users/test/.ssh/included
+        Host visible
+            HostName visible.example.com
+        """)
+
+        XCTAssertEqual(result.entries.map(\.alias), ["visible"])
     }
 
     // MARK: - Failure Modes
@@ -356,38 +316,6 @@ final class SSHConfigParserTests: XCTestCase {
     }
 
     // MARK: - ssh semantics found in review
-
-    func testResolvesRelativeIncludeAgainstConfigDirectory() throws {
-        let result = try parse(
-            "Include config.d/*",
-            includes: ["/Users/test/.ssh/config.d/*": ["/Users/test/.ssh/config.d/extra"]],
-            extraFiles: ["/Users/test/.ssh/config.d/extra": "Host included\n"]
-        )
-
-        XCTAssertEqual(result.entries.map(\.alias), ["included"])
-        XCTAssertFalse(result.warnings.contains { warning in
-            if case .includeNotFound = warning { return true }
-            return false
-        })
-    }
-
-    func testIncludeDoesNotStealFollowingDirectives() throws {
-        let result = try parse("""
-        Include ~/.ssh/extra
-        User globaluser
-
-        Host after
-            HostName after.example.com
-        """,
-        includes: ["~/.ssh/extra": ["/Users/test/.ssh/extra"]],
-        extraFiles: ["/Users/test/.ssh/extra": "Host included\n    User includeduser\n"])
-
-        let included = try XCTUnwrap(result.entries.first { $0.alias == "included" })
-        XCTAssertEqual(included.user, "includeduser")
-
-        let after = try XCTUnwrap(result.entries.first { $0.alias == "after" })
-        XCTAssertEqual(after.user, "globaluser")
-    }
 
     func testHostNameTokenExpandsToAlias() throws {
         let result = try parse("""

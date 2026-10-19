@@ -220,8 +220,7 @@ final class ConnectionListViewModelTests: XCTestCase {
         let parser = SSHConfigParser(
             reader: StubSSHConfigReader(files: [configURL.path: "Host alpha\nHost beta\n"]),
             options: SSHConfigParseOptions(homeDirectory: "/Users/test"),
-            fileExists: { _ in true },
-            includeExpander: { _ in [] }
+            fileExists: { _ in true }
         )
         let importViewModel = SSHConfigImportViewModel(
             configURL: configURL,

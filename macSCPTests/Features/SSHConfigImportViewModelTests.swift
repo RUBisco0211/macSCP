@@ -24,8 +24,7 @@ final class SSHConfigImportViewModelTests: XCTestCase {
         let parser = SSHConfigParser(
             reader: StubSSHConfigReader(files: files),
             options: SSHConfigParseOptions(homeDirectory: home),
-            fileExists: { existingFiles.contains($0) },
-            includeExpander: { _ in [] }
+            fileExists: { existingFiles.contains($0) }
         )
         return SSHConfigImportViewModel(
             configURL: configURL,

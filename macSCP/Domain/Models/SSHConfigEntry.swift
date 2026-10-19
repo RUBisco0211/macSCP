@@ -41,9 +41,9 @@ enum SSHConfigWarning: Hashable, Sendable {
     case unsupportedDirective(alias: String, directive: String)
     case identityFileUnavailable(alias: String, path: String)
     case invalidPort(alias: String, value: String)
-    case includeNotFound(String)
-    case includeCycleSkipped(String)
-    case includeDepthExceeded(String)
+    /// `Include` is not followed: the sandbox only grants access to the file the
+    /// user selected, so referenced files are never read.
+    case includeSkipped(String)
     case malformedLine(path: String, line: Int, content: String)
 
     /// Alias the warning belongs to, or nil for file-wide problems.
@@ -54,9 +54,7 @@ enum SSHConfigWarning: Hashable, Sendable {
              let .invalidPort(alias, _):
             return alias
         case .wildcardHostSkipped,
-             .includeNotFound,
-             .includeCycleSkipped,
-             .includeDepthExceeded,
+             .includeSkipped,
              .malformedLine:
             return nil
         }
@@ -72,12 +70,8 @@ enum SSHConfigWarning: Hashable, Sendable {
             return "\(alias) references \(path), which could not be read. Check the path and file permissions."
         case let .invalidPort(alias, value):
             return "\(alias) has an invalid port \"\(value)\". Falling back to 22."
-        case .includeNotFound(let pattern):
-            return "\"Include \(pattern)\" did not resolve to any readable file."
-        case .includeCycleSkipped(let path):
-            return "Skipped recursive Include of \(path)."
-        case .includeDepthExceeded(let path):
-            return "Skipped Include of \(path): maximum include depth reached."
+        case .includeSkipped(let pattern):
+            return "\"Include \(pattern)\" was skipped: macSCP only imports the file you selected, so included files are not read."
         case let .malformedLine(path, line, content):
             return "Ignored malformed line \(line) in \(path): \(content)"
         }

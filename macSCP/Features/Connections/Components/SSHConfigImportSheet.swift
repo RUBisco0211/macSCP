@@ -185,7 +185,9 @@ struct SSHConfigImportSheet: View {
 
 #Preview {
     SSHConfigImportSheet(
-        viewModel: SSHConfigImportViewModel(),
+        viewModel: SSHConfigImportViewModel(
+            configURL: URL(fileURLWithPath: "/Users/test/.ssh/config")
+        ),
         onImport: { _ in },
         onCancel: {}
     )
