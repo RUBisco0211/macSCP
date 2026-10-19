@@ -297,23 +297,9 @@ actor TerminalSession: TerminalSessionProtocol {
         _ error: Error,
         keyType: SSHPrivateKeyLoader.KeyType? = nil
     ) -> AppError {
-        let description = error.localizedDescription.lowercased()
-
-        if description.contains("connection refused") {
-            return .connectionFailed("Connection refused. Make sure the SSH server is running.")
-        } else if description.contains("host unreachable") || description.contains("no route to host") {
-            return .hostUnreachable
-        } else if description.contains("timeout") {
-            return .connectionTimeout
-        } else if description.contains("authentication") || description.contains("password") || description.contains("permission denied") {
-            if keyType == .rsa {
-                return .privateKeyError(SSHPrivateKeyLoader.legacyRSASignatureMessage)
-            }
-            return .authenticationFailed
-        } else if description.contains("operation not permitted") {
-            return .connectionFailed("Operation not permitted. Check firewall settings.")
+        if let mapped = SSHConnectionErrorMapper.map(error, keyType: keyType) {
+            return mapped
         }
-
         return .terminalConnectionFailed(error.localizedDescription)
     }
 }

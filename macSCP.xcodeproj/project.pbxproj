@@ -655,10 +655,10 @@
 		};
 		47384BA12E96FC5200ECB4B5 /* XCRemoteSwiftPackageReference "Citadel" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Orlandos-nl/Citadel";
+			repositoryURL = "https://github.com/RUBisco0211/Citadel";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.11.1;
+				kind = revision;
+				revision = 9f55d6173fe8446422b86cae90990365ab590ac9;
 			};
 		};
 		47679DD02F33D7E3002F804C /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {

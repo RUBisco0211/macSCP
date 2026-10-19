@@ -63,11 +63,9 @@ enum SSHPrivateKeyLoader {
         let inspection: Inspection
     }
 
-    /// Explains why an RSA key can fail even though the key itself is valid.
-    /// Citadel 0.11.x/0.12.x signs with SHA-1 and labels the signature
-    /// `ssh-rsa`; OpenSSH 8.8+ disables that algorithm by default, so servers
-    /// require the newer rsa-sha2-256/512 signatures instead.
-    static let legacyRSASignatureMessage = "The server rejected this RSA key. macSCP signs RSA authentication with the legacy ssh-rsa (SHA-1) algorithm, which modern OpenSSH servers disable. Use an ed25519 key instead."
+    /// Shown when the server rejects an RSA key after every RFC 8332 variant has
+    /// been offered.
+    static let rsaAuthenticationRejectedMessage = "The server rejected this RSA key. It was offered with rsa-sha2-512, rsa-sha2-256 and ssh-rsa; make sure the matching public key is authorized for this account."
 
     // MARK: - Public API
 
@@ -145,7 +143,9 @@ enum SSHPrivateKeyLoader {
             switch inspection.type {
             case .rsa:
                 let key = try Insecure.RSA.PrivateKey(sshRsa: pem, decryptionKey: decryptionKey)
-                return .rsa(username: username, privateKey: key)
+                // RFC 8332: offer rsa-sha2-512, then rsa-sha2-256, then legacy
+                // ssh-rsa for servers that predate SHA-2 signatures.
+                return .rsaSHA2(username: username, privateKey: key)
             case .ed25519:
                 let key = try Curve25519.Signing.PrivateKey(sshEd25519: pem, decryptionKey: decryptionKey)
                 return .ed25519(username: username, privateKey: key)
