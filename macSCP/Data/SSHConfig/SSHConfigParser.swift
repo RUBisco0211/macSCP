@@ -35,8 +35,8 @@ enum SSHConfigError: LocalizedError, Sendable {
 
     var errorDescription: String? {
         switch self {
-        case let .unreadableFile(path, reason):
-            return "Cannot read the ssh_config file at \(path): \(reason)"
+        case .unreadableFile(let path, let reason):
+            return String(localized: "Cannot read the ssh_config file at \(path): \(reason)")
         }
     }
 }
@@ -141,7 +141,8 @@ struct SSHConfigParser: Sendable {
         var seen: Set<String> = []
 
         for section in sections where !section.isMatch {
-            for pattern in section.patterns where !pattern.hasPrefix("!") && Self.isLiteral(pattern) {
+            for pattern in section.patterns where !pattern.hasPrefix("!") && Self.isLiteral(pattern)
+            {
                 if seen.insert(pattern.lowercased()).inserted {
                     aliases.append(pattern)
                 }
@@ -199,13 +200,15 @@ struct SSHConfigParser: Sendable {
         }
 
         var port = AppConstants.defaultSSHPort
-        if let rawPort = portValue, let parsed = Int(rawPort.trimmed), (1...65535).contains(parsed) {
+        if let rawPort = portValue, let parsed = Int(rawPort.trimmed), (1...65535).contains(parsed)
+        {
             port = parsed
         }
 
         var identityFile: String?
         if let rawPath = resolved["identityfile"]?.first {
-            let expanded = expandTokens(rawPath, host: hostName, user: user ?? localUser, port: portString)
+            let expanded = expandTokens(
+                rawPath, host: hostName, user: user ?? localUser, port: portString)
             identityFile = Self.absolutePath(
                 expanded,
                 configDirectory: configDirectory,
@@ -226,7 +229,9 @@ struct SSHConfigParser: Sendable {
 
     /// Makes a possibly relative path absolute so it stays valid when the key is
     /// read at connection time.
-    static func absolutePath(_ path: String, configDirectory: String, homeDirectory: String) -> String {
+    static func absolutePath(_ path: String, configDirectory: String, homeDirectory: String)
+        -> String
+    {
         let expanded: String
         if path == "~" {
             expanded = homeDirectory
@@ -361,7 +366,9 @@ struct SSHConfigParser: Sendable {
 
         while valueIndex < valueBytes.count {
             if patternIndex < patternBytes.count,
-               patternBytes[patternIndex] == questionMark || patternBytes[patternIndex] == valueBytes[valueIndex] {
+                patternBytes[patternIndex] == questionMark
+                    || patternBytes[patternIndex] == valueBytes[valueIndex]
+            {
                 patternIndex += 1
                 valueIndex += 1
             } else if patternIndex < patternBytes.count, patternBytes[patternIndex] == asterisk {

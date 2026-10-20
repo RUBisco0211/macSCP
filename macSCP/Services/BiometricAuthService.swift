@@ -21,11 +21,11 @@ enum BiometricError: LocalizedError, Sendable {
     var errorDescription: String? {
         switch self {
         case .notAvailable:
-            return "Touch ID is not available on this Mac."
+            return String(localized: "Touch ID is not available on this Mac.")
         case .authenticationFailed(let message):
-            return "Authentication failed: \(message)"
+            return String(localized: "Authentication failed: \(message)")
         case .userCancelled:
-            return "Authentication was cancelled."
+            return String(localized: "Authentication was cancelled.")
         }
     }
 }

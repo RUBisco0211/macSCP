@@ -68,7 +68,8 @@ struct FileBrowserView: View {
                 ? viewModel.connection.name : (viewModel.currentPath as NSString).lastPathComponent
         )
         .navigationSubtitle(
-            viewModel.isConnected ? viewModel.connection.connectionString : "Disconnected"
+            viewModel.isConnected
+                ? viewModel.connection.connectionString : String(localized: "Disconnected")
         )
         .toolbar(id: "browserToolbar") {
             // Navigation group
@@ -161,7 +162,9 @@ struct FileBrowserView: View {
             ToolbarItem(id: "hiddenFiles", placement: .primaryAction) {
                 Toggle(isOn: $viewModel.showHiddenFiles) {
                     Label(
-                        viewModel.showHiddenFiles ? "Hide Hidden Files" : "Show Hidden Files",
+                        viewModel.showHiddenFiles
+                            ? String(localized: "Hide Hidden Files")
+                            : String(localized: "Show Hidden Files"),
                         systemImage: viewModel.showHiddenFiles ? "eye.fill" : "eye.slash"
                     )
                 }
@@ -180,7 +183,7 @@ struct FileBrowserView: View {
                             }
                         } label: {
                             HStack {
-                                Text(criteria.rawValue)
+                                Text(criteria.displayName)
                                 if viewModel.sortCriteria == criteria {
                                     Image(
                                         systemName: viewModel.sortAscending
@@ -298,7 +301,9 @@ struct FileBrowserView: View {
     private var contentView: some View {
         switch viewModel.state {
         case .idle, .loading:
-            LoadingView(message: viewModel.isConnected ? "Loading..." : "Connecting...")
+            LoadingView(
+                message: viewModel.isConnected
+                    ? LocalizedStringKey("Loading...") : LocalizedStringKey("Connecting..."))
 
         case .success:
             FileListView(
@@ -328,9 +333,12 @@ struct FileBrowserView: View {
                     .fill(viewModel.isConnected ? Color.green : Color.red)
                     .frame(width: 7, height: 7)
 
-                Text(viewModel.isConnected ? "Connected" : "Disconnected")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                Text(
+                    viewModel.isConnected
+                        ? String(localized: "Connected") : String(localized: "Disconnected")
+                )
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
             }
 
             Spacer()
@@ -437,7 +445,8 @@ struct FileBrowserView: View {
                 !AppLockManager.shared.isLocked
             else {
                 logWarning("Share upload ignored after entering task", category: .ui)
-                viewModel.error = .uploadFailed("Upload could not start. Reconnect and try again.")
+                viewModel.error = .uploadFailed(
+                    String(localized: "Upload could not start. Reconnect and try again."))
                 return
             }
             logInfo("Share upload starting for \(sources.count) item(s)", category: .ui)

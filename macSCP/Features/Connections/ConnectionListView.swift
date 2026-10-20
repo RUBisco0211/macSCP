@@ -149,7 +149,9 @@ struct ConnectionListView: View {
         } message: {
             if let folder = viewModel.folderToDelete {
                 let count = viewModel.connectionCount(for: folder.id)
-                Text("Are you sure you want to delete \"\(folder.name)\"? \(count > 0 ? "The \(count) connection(s) in this folder will be moved to All Connections." : "")")
+                Text(
+                    "Are you sure you want to delete \"\(folder.name)\"? \(count > 0 ? String(localized: "The \(count) connection(s) in this folder will be moved to All Connections.") : "")"
+                )
             }
         }
         .errorAlert($viewModel.error)

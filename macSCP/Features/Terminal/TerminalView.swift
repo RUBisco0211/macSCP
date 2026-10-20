@@ -5,9 +5,9 @@
 //  Terminal view with SwiftTerm integration
 //
 
-import SwiftUI
 import AppKit
 import SwiftTerm
+import SwiftUI
 
 // MARK: - Terminal View
 
@@ -42,7 +42,6 @@ struct TerminalContentView: View {
                 .disabled(viewModel.state == .connecting)
                 .help("Reconnect")
             }
-
 
         }
         .task {
@@ -266,11 +265,13 @@ struct TerminalContentView: View {
         case .connected:
             return viewModel.connectionString
         case .connecting:
-            return "Connecting..."
+            return String(localized: "Connecting...")
         case .disconnected:
-            return showSessionEndedBanner ? "Session Ended" : "Disconnected"
+            return showSessionEndedBanner
+                ? String(localized: "Session Ended")
+                : String(localized: "Disconnected")
         case .error:
-            return "Connection Error"
+            return String(localized: "Connection Error")
         }
     }
 
@@ -278,13 +279,15 @@ struct TerminalContentView: View {
     private var statusBarText: String {
         switch viewModel.state {
         case .connected:
-            return "Connected"
+            return String(localized: "Connected")
         case .connecting:
-            return "Connecting..."
+            return String(localized: "Connecting...")
         case .disconnected:
-            return showSessionEndedBanner ? "Session Ended" : "Disconnected"
+            return showSessionEndedBanner
+                ? String(localized: "Session Ended")
+                : String(localized: "Disconnected")
         case .error:
-            return "Connection Lost"
+            return String(localized: "Connection Lost")
         }
     }
 }

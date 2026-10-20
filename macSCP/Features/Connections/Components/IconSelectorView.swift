@@ -59,7 +59,10 @@ struct IconSelectorView: View {
 
             // Icons grid
             ScrollView {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6),
+                    spacing: 8
+                ) {
                     ForEach(filteredIcons, id: \.self) { icon in
                         IconCell(
                             icon: icon,
@@ -97,7 +100,10 @@ struct IconSelectorView: View {
     }
 
     private var filteredIcons: [String] {
-        let icons = searchText.isEmpty ? selectedCategory.icons : allIcons.filter { $0.localizedCaseInsensitiveContains(searchText) }
+        let icons =
+            searchText.isEmpty
+            ? selectedCategory.icons
+            : allIcons.filter { $0.localizedCaseInsensitiveContains(searchText) }
         return icons
     }
 
@@ -151,11 +157,16 @@ private struct IconCell: View {
                 .font(.system(size: 18))
                 .frame(width: 44, height: 44)
                 .foregroundStyle(isSelected ? .white : (isHovering ? .blue : .primary))
-                .background(isSelected ? Color.blue : (isHovering ? Color.blue.opacity(0.1) : Color.clear))
+                .background(
+                    isSelected ? Color.blue : (isHovering ? Color.blue.opacity(0.1) : Color.clear)
+                )
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay {
                     RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(isSelected ? Color.blue : (isHovering ? Color.blue.opacity(0.3) : Color.clear), lineWidth: 1.5)
+                        .strokeBorder(
+                            isSelected
+                                ? Color.blue : (isHovering ? Color.blue.opacity(0.3) : Color.clear),
+                            lineWidth: 1.5)
                 }
         }
         .buttonStyle(.plain)
@@ -178,14 +189,14 @@ enum IconCategory: CaseIterable {
 
     var displayName: String {
         switch self {
-        case .servers: return "Servers"
-        case .devices: return "Devices"
-        case .network: return "Network"
-        case .cloud: return "Cloud"
-        case .storage: return "Storage"
-        case .security: return "Security"
-        case .development: return "Dev"
-        case .misc: return "Misc"
+        case .servers: return String(localized: "Servers")
+        case .devices: return String(localized: "Devices")
+        case .network: return String(localized: "Network")
+        case .cloud: return String(localized: "Cloud")
+        case .storage: return String(localized: "Storage")
+        case .security: return String(localized: "Security")
+        case .development: return String(localized: "Dev")
+        case .misc: return String(localized: "Misc")
         }
     }
 
@@ -218,7 +229,7 @@ enum IconCategory: CaseIterable {
                 "terminal",
                 "terminal.fill",
                 "text.and.command.macwindow",
-                "rectangle.on.rectangle.badge.gearshape"
+                "rectangle.on.rectangle.badge.gearshape",
             ]
         case .devices:
             return [
@@ -242,7 +253,7 @@ enum IconCategory: CaseIterable {
                 "tv",
                 "tv.inset.filled",
                 "appletv",
-                "appletv.fill"
+                "appletv.fill",
             ]
         case .network:
             return [
@@ -264,7 +275,7 @@ enum IconCategory: CaseIterable {
                 "arrow.left.arrow.right",
                 "arrow.up.arrow.down",
                 "link",
-                "personalhotspot"
+                "personalhotspot",
             ]
         case .cloud:
             return [
@@ -283,7 +294,7 @@ enum IconCategory: CaseIterable {
                 "cloud.bolt",
                 "cloud.bolt.fill",
                 "cloud.sun",
-                "cloud.sun.fill"
+                "cloud.sun.fill",
             ]
         case .storage:
             return [
@@ -306,7 +317,7 @@ enum IconCategory: CaseIterable {
                 "doc",
                 "doc.fill",
                 "folder",
-                "folder.fill"
+                "folder.fill",
             ]
         case .security:
             return [
@@ -330,7 +341,7 @@ enum IconCategory: CaseIterable {
                 "person.badge.key",
                 "person.badge.key.fill",
                 "touchid",
-                "faceid"
+                "faceid",
             ]
         case .development:
             return [
@@ -353,7 +364,7 @@ enum IconCategory: CaseIterable {
                 "ant",
                 "ant.fill",
                 "ladybug",
-                "ladybug.fill"
+                "ladybug.fill",
             ]
         case .misc:
             return [
@@ -376,7 +387,7 @@ enum IconCategory: CaseIterable {
                 "wand.and.rays",
                 "rays",
                 "building.2",
-                "building.2.fill"
+                "building.2.fill",
             ]
         }
     }

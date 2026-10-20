@@ -94,8 +94,9 @@ final class ShareImportCoordinator {
             !connections.isEmpty
         else {
             ShareAlert.run(
-                title: "No Saved Connections",
-                message: "Create a connection in macSCP, then share the files again.")
+                title: String(localized: "No Saved Connections"),
+                message: String(
+                    localized: "Create a connection in macSCP, then share the files again."))
             await abort(session, id: id)
             return
         }
@@ -125,16 +126,16 @@ final class ShareImportCoordinator {
                 return credentials.secretAccessKey
             }
             return SharePasswordPrompt.run(
-                title: "S3 Credentials",
-                message: "Enter the secret access key for “\(connection.name)”.",
-                placeholder: "Secret Access Key")
+                title: String(localized: "S3 Credentials"),
+                message: String(localized: "Enter the secret access key for “\(connection.name)”."),
+                placeholder: String(localized: "Secret Access Key"))
         case .sftp:
             if let password = keychain.getPassword(for: connection.id) { return password }
             if connection.authMethod == .privateKey { return "" }
             return SharePasswordPrompt.run(
-                title: "Password",
-                message: "Enter the password for “\(connection.name)”.",
-                placeholder: "Password")
+                title: String(localized: "Password"),
+                message: String(localized: "Enter the password for “\(connection.name)”."),
+                placeholder: String(localized: "Password"))
         }
     }
 
@@ -160,7 +161,7 @@ final class ShareImportCoordinator {
             contentRect: NSRect(x: 0, y: 0, width: 600, height: 700),
             styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
         )
-        panel.title = "Share to macSCP"
+        panel.title = String(localized: "Share to macSCP")
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.isFloatingPanel = true

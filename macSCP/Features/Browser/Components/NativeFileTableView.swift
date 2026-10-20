@@ -33,25 +33,25 @@ struct NativeFileTableView: NSViewRepresentable {
 
         // Configure columns
         let nameColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("name"))
-        nameColumn.title = "Name"
+        nameColumn.title = String(localized: "Name")
         nameColumn.width = 250
         nameColumn.minWidth = 150
         nameColumn.sortDescriptorPrototype = NSSortDescriptor(key: "name", ascending: true)
 
         let kindColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("kind"))
-        kindColumn.title = "Kind"
+        kindColumn.title = String(localized: "Kind")
         kindColumn.width = 120
         kindColumn.minWidth = 80
         kindColumn.sortDescriptorPrototype = NSSortDescriptor(key: "kind", ascending: true)
 
         let dateColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("date"))
-        dateColumn.title = "Date Modified"
+        dateColumn.title = String(localized: "Date Modified")
         dateColumn.width = 140
         dateColumn.minWidth = 100
         dateColumn.sortDescriptorPrototype = NSSortDescriptor(key: "date", ascending: true)
 
         let sizeColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("size"))
-        sizeColumn.title = "Size"
+        sizeColumn.title = String(localized: "Size")
         sizeColumn.width = 80
         sizeColumn.minWidth = 60
         sizeColumn.sortDescriptorPrototype = NSSortDescriptor(key: "size", ascending: true)
@@ -370,7 +370,7 @@ extension NativeFileTableView.Coordinator {
         let menu = NSMenu()
 
         if file.isFile {
-            let openItem = NSMenuItem(title: "Open in Editor", action: #selector(handleOpenInEditor(_:)), keyEquivalent: "")
+            let openItem = NSMenuItem(title: String(localized: "Open in Editor"), action: #selector(handleOpenInEditor(_:)), keyEquivalent: "")
             openItem.target = self
             openItem.representedObject = file
             openItem.image = NSImage(systemSymbolName: "pencil.and.outline", accessibilityDescription: nil)
@@ -378,20 +378,20 @@ extension NativeFileTableView.Coordinator {
             menu.addItem(NSMenuItem.separator())
         }
 
-        let copyItem = NSMenuItem(title: "Copy", action: #selector(handleCopy(_:)), keyEquivalent: "")
+        let copyItem = NSMenuItem(title: String(localized: "Copy"), action: #selector(handleCopy(_:)), keyEquivalent: "")
         copyItem.target = self
         copyItem.representedObject = file
         copyItem.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: nil)
         menu.addItem(copyItem)
 
-        let cutItem = NSMenuItem(title: "Cut", action: #selector(handleCut(_:)), keyEquivalent: "")
+        let cutItem = NSMenuItem(title: String(localized: "Cut"), action: #selector(handleCut(_:)), keyEquivalent: "")
         cutItem.target = self
         cutItem.representedObject = file
         cutItem.image = NSImage(systemSymbolName: "scissors", accessibilityDescription: nil)
         menu.addItem(cutItem)
 
         if viewModel.canPaste {
-            let pasteItem = NSMenuItem(title: "Paste", action: #selector(handlePaste(_:)), keyEquivalent: "")
+            let pasteItem = NSMenuItem(title: String(localized: "Paste"), action: #selector(handlePaste(_:)), keyEquivalent: "")
             pasteItem.target = self
             pasteItem.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: nil)
             menu.addItem(pasteItem)
@@ -399,13 +399,13 @@ extension NativeFileTableView.Coordinator {
 
         menu.addItem(NSMenuItem.separator())
 
-        let renameItem = NSMenuItem(title: "Rename", action: #selector(handleRename(_:)), keyEquivalent: "")
+        let renameItem = NSMenuItem(title: String(localized: "Rename"), action: #selector(handleRename(_:)), keyEquivalent: "")
         renameItem.target = self
         renameItem.representedObject = file
         renameItem.image = NSImage(systemSymbolName: "pencil", accessibilityDescription: nil)
         menu.addItem(renameItem)
 
-        let infoItem = NSMenuItem(title: "Get Info", action: #selector(handleGetInfo(_:)), keyEquivalent: "")
+        let infoItem = NSMenuItem(title: String(localized: "Get Info"), action: #selector(handleGetInfo(_:)), keyEquivalent: "")
         infoItem.target = self
         infoItem.representedObject = file
         infoItem.image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil)
@@ -414,7 +414,7 @@ extension NativeFileTableView.Coordinator {
         menu.addItem(NSMenuItem.separator())
 
         if file.isFile {
-            let downloadItem = NSMenuItem(title: "Download", action: #selector(handleDownload(_:)), keyEquivalent: "")
+            let downloadItem = NSMenuItem(title: String(localized: "Download"), action: #selector(handleDownload(_:)), keyEquivalent: "")
             downloadItem.target = self
             downloadItem.representedObject = file
             downloadItem.image = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil)
@@ -422,7 +422,7 @@ extension NativeFileTableView.Coordinator {
             menu.addItem(NSMenuItem.separator())
         }
 
-        let deleteItem = NSMenuItem(title: "Delete", action: #selector(handleDelete(_:)), keyEquivalent: "")
+        let deleteItem = NSMenuItem(title: String(localized: "Delete"), action: #selector(handleDelete(_:)), keyEquivalent: "")
         deleteItem.target = self
         deleteItem.representedObject = file
         deleteItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)

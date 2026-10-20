@@ -13,15 +13,15 @@ enum ConnectionFormMode {
 
     var title: String {
         switch self {
-        case .create: return "New Connection"
-        case .edit: return "Edit Connection"
+        case .create: return String(localized: "New Connection")
+        case .edit: return String(localized: "Edit Connection")
         }
     }
 
     var saveButtonTitle: String {
         switch self {
-        case .create: return "Create"
-        case .edit: return "Save"
+        case .create: return String(localized: "Create")
+        case .edit: return String(localized: "Save")
         }
     }
 }
@@ -171,7 +171,8 @@ struct ConnectionFormSheet: View {
                                     addTag()
                                 } label: {
                                     Image(systemName: "plus.circle.fill")
-                                        .foregroundStyle(newTag.trimmed.isEmpty ? Color.gray : Color.blue)
+                                        .foregroundStyle(
+                                            newTag.trimmed.isEmpty ? Color.gray : Color.blue)
                                 }
                                 .buttonStyle(.plain)
                                 .disabled(newTag.trimmed.isEmpty)
@@ -232,15 +233,11 @@ struct ConnectionFormSheet: View {
     private var isValid: Bool {
         switch selectedType {
         case .sftp:
-            return !name.trimmed.isEmpty &&
-                !host.trimmed.isEmpty &&
-                !username.trimmed.isEmpty &&
-                (Int(port) ?? 0) > 0 && (Int(port) ?? 0) <= 65535 &&
-                (authMethod == .password || !privateKeyPath.trimmed.isEmpty)
+            return !name.trimmed.isEmpty && !host.trimmed.isEmpty && !username.trimmed.isEmpty
+                && (Int(port) ?? 0) > 0 && (Int(port) ?? 0) <= 65535
+                && (authMethod == .password || !privateKeyPath.trimmed.isEmpty)
         case .s3:
-            return !name.trimmed.isEmpty &&
-                !username.trimmed.isEmpty &&
-                !s3Bucket.trimmed.isEmpty
+            return !name.trimmed.isEmpty && !username.trimmed.isEmpty && !s3Bucket.trimmed.isEmpty
         }
     }
 
@@ -299,7 +296,8 @@ struct ConnectionFormSheet: View {
                 connectionType: selectedType,
                 s3Region: selectedType == .s3 ? s3Region.trimmed : nil,
                 s3Bucket: selectedType == .s3 ? s3Bucket.trimmed : nil,
-                s3Endpoint: selectedType == .s3 && !s3Endpoint.trimmed.isEmpty ? s3Endpoint.trimmed : nil
+                s3Endpoint: selectedType == .s3 && !s3Endpoint.trimmed.isEmpty
+                    ? s3Endpoint.trimmed : nil
             )
         } else {
             connection = Connection(
@@ -317,7 +315,8 @@ struct ConnectionFormSheet: View {
                 connectionType: selectedType,
                 s3Region: selectedType == .s3 ? s3Region.trimmed : nil,
                 s3Bucket: selectedType == .s3 ? s3Bucket.trimmed : nil,
-                s3Endpoint: selectedType == .s3 && !s3Endpoint.trimmed.isEmpty ? s3Endpoint.trimmed : nil
+                s3Endpoint: selectedType == .s3 && !s3Endpoint.trimmed.isEmpty
+                    ? s3Endpoint.trimmed : nil
             )
         }
 
@@ -337,7 +336,8 @@ struct ConnectionFormSheet: View {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh")
+        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(
+            ".ssh")
 
         if panel.runModal() == .OK, let url = panel.url {
             privateKeyPath = url.path
@@ -440,7 +440,9 @@ struct FlowLayout: Layout {
         return result.size
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(
+        in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+    ) {
         let result = FlowResult(
             in: bounds.width,
             subviews: subviews,
@@ -448,9 +450,11 @@ struct FlowLayout: Layout {
         )
 
         for (index, subview) in subviews.enumerated() {
-            subview.place(at: CGPoint(x: bounds.minX + result.positions[index].x,
-                                      y: bounds.minY + result.positions[index].y),
-                         proposal: .unspecified)
+            subview.place(
+                at: CGPoint(
+                    x: bounds.minX + result.positions[index].x,
+                    y: bounds.minY + result.positions[index].y),
+                proposal: .unspecified)
         }
     }
 
@@ -488,7 +492,7 @@ struct FlowLayout: Layout {
         mode: .create,
         folders: [
             Folder(name: "Production"),
-            Folder(name: "Development")
+            Folder(name: "Development"),
         ],
         onSave: { _, _ in },
         onCancel: {}
@@ -497,16 +501,17 @@ struct FlowLayout: Layout {
 
 #Preview("Edit") {
     ConnectionFormSheet(
-        mode: .edit(Connection(
-            name: "Test Server",
-            host: "test.example.com",
-            username: "admin",
-            tags: ["production", "critical"]
-        )),
+        mode: .edit(
+            Connection(
+                name: "Test Server",
+                host: "test.example.com",
+                username: "admin",
+                tags: ["production", "critical"]
+            )),
         savedPassword: "secret123",
         folders: [
             Folder(name: "Production"),
-            Folder(name: "Development")
+            Folder(name: "Development"),
         ],
         onSave: { _, _ in },
         onCancel: {}

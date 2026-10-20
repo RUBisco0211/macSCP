@@ -18,8 +18,8 @@ enum SSHConfigFilePicker {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Import"
-        panel.message = "Select the ssh_config file to import."
+        panel.prompt = String(localized: "Import")
+        panel.message = String(localized: "Select the ssh_config file to import.")
 
         guard panel.runModal() == .OK else { return nil }
         return panel.url

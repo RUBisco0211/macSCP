@@ -8,10 +8,10 @@
 import SwiftUI
 
 struct NameInputSheet: View {
-    let title: String
-    let message: String
-    let placeholder: String
-    let confirmButtonTitle: String
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey?
+    let placeholder: LocalizedStringKey
+    let confirmButtonTitle: LocalizedStringKey
     let onConfirm: (String) -> Void
     let onCancel: () -> Void
 
@@ -19,11 +19,11 @@ struct NameInputSheet: View {
     @FocusState private var isFocused: Bool
 
     init(
-        title: String,
-        message: String = "",
-        placeholder: String = "Name",
+        title: LocalizedStringKey,
+        message: LocalizedStringKey? = nil,
+        placeholder: LocalizedStringKey = "Name",
         initialValue: String = "",
-        confirmButtonTitle: String = "Create",
+        confirmButtonTitle: LocalizedStringKey = "Create",
         onConfirm: @escaping (String) -> Void,
         onCancel: @escaping () -> Void
     ) {
@@ -41,7 +41,7 @@ struct NameInputSheet: View {
             Text(title)
                 .font(.headline)
 
-            if !message.isEmpty {
+            if let message {
                 Text(message)
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -85,7 +85,9 @@ struct NameInputSheet: View {
 
 // MARK: - Preset Sheets
 extension NameInputSheet {
-    static func newFolder(onConfirm: @escaping (String) -> Void, onCancel: @escaping () -> Void) -> NameInputSheet {
+    static func newFolder(onConfirm: @escaping (String) -> Void, onCancel: @escaping () -> Void)
+        -> NameInputSheet
+    {
         NameInputSheet(
             title: "New Folder",
             message: "Enter a name for the new folder.",
@@ -96,7 +98,9 @@ extension NameInputSheet {
         )
     }
 
-    static func newFile(onConfirm: @escaping (String) -> Void, onCancel: @escaping () -> Void) -> NameInputSheet {
+    static func newFile(onConfirm: @escaping (String) -> Void, onCancel: @escaping () -> Void)
+        -> NameInputSheet
+    {
         NameInputSheet(
             title: "New File",
             message: "Enter a name for the new file.",

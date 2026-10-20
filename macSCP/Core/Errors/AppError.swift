@@ -64,108 +64,108 @@ enum AppError: LocalizedError, Sendable {
     var errorDescription: String? {
         switch self {
         case .connectionFailed(let message):
-            return "Connection failed: \(message)"
+            return String(localized: "Connection failed: \(message)")
         case .connectionTimeout:
-            return "Connection timed out"
+            return String(localized: "Connection timed out")
         case .connectionLost:
-            return "Connection was lost"
+            return String(localized: "Connection was lost")
         case .authenticationFailed:
-            return "Authentication failed. Please check your credentials."
+            return String(localized: "Authentication failed. Please check your credentials.")
         case .privateKeyError(let message):
             return message
         case .hostUnreachable:
-            return "Host is unreachable. Check the hostname and network connection."
+            return String(localized: "Host is unreachable. Check the hostname and network connection.")
 
         case .sftpOperationFailed(let message):
-            return "SFTP operation failed: \(message)"
+            return String(localized: "SFTP operation failed: \(message)")
         case .permissionDenied:
-            return "Permission denied"
+            return String(localized: "Permission denied")
         case .fileNotFound:
-            return "File or directory not found"
+            return String(localized: "File or directory not found")
         case .fileAlreadyExists:
-            return "A file or directory with this name already exists"
+            return String(localized: "A file or directory with this name already exists")
         case .directoryNotEmpty:
-            return "Directory is not empty"
+            return String(localized: "Directory is not empty")
         case .invalidPath:
-            return "Invalid path"
+            return String(localized: "Invalid path")
 
         case .s3BucketNotFound:
-            return "S3 bucket not found"
+            return String(localized: "S3 bucket not found")
         case .s3AccessDenied:
-            return "Access denied to S3 resource"
+            return String(localized: "Access denied to S3 resource")
         case .s3ObjectNotFound:
-            return "S3 object not found"
+            return String(localized: "S3 object not found")
         case .s3OperationFailed(let message):
-            return "S3 operation failed: \(message)"
+            return String(localized: "S3 operation failed: \(message)")
         case .invalidS3Credentials:
-            return "Invalid S3 credentials"
+            return String(localized: "Invalid S3 credentials")
 
         case .saveFailed(let message):
-            return "Failed to save: \(message)"
+            return String(localized: "Failed to save: \(message)")
         case .fetchFailed(let message):
-            return "Failed to fetch: \(message)"
+            return String(localized: "Failed to fetch: \(message)")
         case .deleteFailed(let message):
-            return "Failed to delete: \(message)"
+            return String(localized: "Failed to delete: \(message)")
         case .entityNotFound:
-            return "Entity not found"
+            return String(localized: "Entity not found")
 
         case .keychainSaveFailed:
-            return "Failed to save password to keychain"
+            return String(localized: "Failed to save password to keychain")
         case .keychainReadFailed:
-            return "Failed to read password from keychain"
+            return String(localized: "Failed to read password from keychain")
         case .keychainDeleteFailed:
-            return "Failed to delete password from keychain"
+            return String(localized: "Failed to delete password from keychain")
 
         case .downloadFailed(let message):
-            return "Download failed: \(message)"
+            return String(localized: "Download failed: \(message)")
         case .uploadFailed(let message):
-            return "Upload failed: \(message)"
+            return String(localized: "Upload failed: \(message)")
         case .fileReadFailed:
-            return "Failed to read file"
+            return String(localized: "Failed to read file")
         case .fileWriteFailed:
-            return "Failed to write file"
+            return String(localized: "Failed to write file")
 
         case .terminalConnectionFailed(let message):
-            return "Terminal connection failed: \(message)"
+            return String(localized: "Terminal connection failed: \(message)")
         case .terminalConnectionLost:
-            return "Terminal connection was lost"
+            return String(localized: "Terminal connection was lost")
         case .terminalPTYFailed:
-            return "Failed to allocate pseudo-terminal"
+            return String(localized: "Failed to allocate pseudo-terminal")
 
         case .biometricNotAvailable:
-            return "Touch ID is not available on this Mac"
+            return String(localized: "Touch ID is not available on this Mac")
         case .biometricAuthFailed(let message):
-            return "Authentication failed: \(message)"
+            return String(localized: "Authentication failed: \(message)")
 
         case .unknown(let message):
             return message
         case .notConnected:
-            return "Not connected to server"
+            return String(localized: "Not connected to server")
         }
     }
 
     var recoverySuggestion: String? {
         switch self {
         case .connectionFailed, .connectionTimeout, .hostUnreachable:
-            return "Please check your network connection and server address."
+            return String(localized: "Please check your network connection and server address.")
         case .authenticationFailed:
-            return "Please verify your username and password."
+            return String(localized: "Please verify your username and password.")
         case .permissionDenied, .s3AccessDenied:
-            return "You don't have permission to perform this action."
+            return String(localized: "You don't have permission to perform this action.")
         case .notConnected:
-            return "Please connect to a server first."
+            return String(localized: "Please connect to a server first.")
         case .s3BucketNotFound:
-            return "Please check your bucket name and region."
+            return String(localized: "Please check your bucket name and region.")
         case .invalidS3Credentials:
-            return "Please verify your Access Key ID and Secret Access Key."
+            return String(localized: "Please verify your Access Key ID and Secret Access Key.")
         case .terminalConnectionFailed, .terminalConnectionLost:
-            return "Please check your network connection and try reconnecting."
+            return String(localized: "Please check your network connection and try reconnecting.")
         case .terminalPTYFailed:
-            return "The server may not support interactive terminals. Please try again."
+            return String(localized: "The server may not support interactive terminals. Please try again.")
         case .biometricNotAvailable:
-            return "Use a Mac with Touch ID or pair an Apple Watch to enable biometric authentication."
+            return String(localized: "Use a Mac with Touch ID or pair an Apple Watch to enable biometric authentication.")
         case .biometricAuthFailed:
-            return "Please try again or use your system password."
+            return String(localized: "Please try again or use your system password.")
         default:
             return nil
         }

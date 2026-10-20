@@ -1,0 +1,145 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Cancel" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        }
+      }
+    },
+    "Cancelling and cleaning up…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在取消并清理…"
+          }
+        }
+      }
+    },
+    "Files are temporarily copied before opening the connection picker. Large folders need extra time and disk space." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在打开连接选择器之前，文件会被临时复制。大型文件夹需要额外的时间和磁盘空间。"
+          }
+        }
+      }
+    },
+    "Opening macSCP…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在打开 macSCP…"
+          }
+        }
+      }
+    },
+    "Preparing item %lld of %lld…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在准备第 %lld 项，共 %lld 项…"
+          }
+        }
+      }
+    },
+    "Preparing shared files…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在准备共享文件…"
+          }
+        }
+      }
+    },
+    "Select between 1 and 1,000 files or folders in Finder and share again." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在访达中选择 1 到 1,000 个文件或文件夹后重新共享。"
+          }
+        }
+      }
+    },
+    "Share to MacSCP" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享到 MacSCP"
+          }
+        }
+      }
+    },
+    "Symbolic links and special files are not supported: %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不支持符号链接和特殊文件：%@"
+          }
+        }
+      }
+    },
+    "The shared request is invalid or has expired. Please share the files again." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享请求无效或已过期。请重新共享文件。"
+          }
+        }
+      }
+    },
+    "Try Again" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试"
+          }
+        }
+      }
+    },
+    "Two selected items have the same name: %@. Share them separately." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有两个所选项目同名：%@。请分别共享。"
+          }
+        }
+      }
+    },
+    "macSCP could not be opened. Keep the extension inside macSCP.app and try again." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开 macSCP。请将扩展保留在 macSCP.app 内后重试。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

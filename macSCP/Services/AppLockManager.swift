@@ -19,11 +19,11 @@ enum InactivityTimeout: Int, CaseIterable, Sendable, Identifiable {
 
     var label: String {
         switch self {
-        case .oneMinute: return "1 minute"
-        case .fiveMinutes: return "5 minutes"
-        case .fifteenMinutes: return "15 minutes"
-        case .thirtyMinutes: return "30 minutes"
-        case .oneHour: return "1 hour"
+        case .oneMinute: return String(localized: "1 minute")
+        case .fiveMinutes: return String(localized: "5 minutes")
+        case .fifteenMinutes: return String(localized: "15 minutes")
+        case .thirtyMinutes: return String(localized: "30 minutes")
+        case .oneHour: return String(localized: "1 hour")
         }
     }
 }
@@ -59,7 +59,9 @@ final class AppLockManager {
     }
 
     var lockBeforeConnection: Bool = false {
-        didSet { UserDefaults.standard.set(lockBeforeConnection, forKey: Keys.lockBeforeConnection) }
+        didSet {
+            UserDefaults.standard.set(lockBeforeConnection, forKey: Keys.lockBeforeConnection)
+        }
     }
 
     var lockAfterInactivity: Bool = false {
@@ -126,7 +128,7 @@ final class AppLockManager {
     /// Attempt to unlock the app
     func unlock() {
         Task { @MainActor in
-            let success = await performAuthentication(reason: "Unlock macSCP")
+            let success = await performAuthentication(reason: String(localized: "Unlock macSCP"))
             if success {
                 resetInactivityTimer()
             }
@@ -140,7 +142,8 @@ final class AppLockManager {
         }
 
         logInfo("Authenticating for connection", category: .auth)
-        let success = await performAuthentication(reason: "Authenticate to connect")
+        let success = await performAuthentication(
+            reason: String(localized: "Authenticate to connect"))
         if success {
             resetInactivityTimer()
         }
@@ -158,7 +161,8 @@ final class AppLockManager {
     /// Returns true if the lock was successfully disabled.
     @discardableResult
     func disableBiometricLock() async -> Bool {
-        let success = await performAuthentication(reason: "Authenticate to disable Touch ID lock")
+        let success = await performAuthentication(
+            reason: String(localized: "Authenticate to disable Touch ID lock"))
         guard success else {
             logInfo("Biometric lock disable denied: auth failed", category: .auth)
             return false
@@ -224,7 +228,8 @@ final class AppLockManager {
         guard isBiometricLockEnabled, lockAfterInactivity, !isLocked else { return }
 
         let seconds = TimeInterval(inactivityTimeout.rawValue)
-        inactivityTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
+        inactivityTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) {
+            [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.lock(reason: "inactivity timeout")
             }

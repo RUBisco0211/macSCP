@@ -10,6 +10,7 @@
 		A10000000000000000000001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* ShareViewController.swift */; };
 		A10000000000000000000003 /* ShareRequestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* ShareRequestStore.swift */; };
 		A10000000000000000000005 /* MacSCPShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A10000000000000000000006 /* MacSCPShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A10000000000000000000018 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* Localizable.xcstrings */; };
 		4721B3DC2F2F229B00279B18 /* TelemetryClient in Frameworks */ = {isa = PBXBuildFile; productRef = 4721B3DB2F2F229B00279B18 /* TelemetryClient */; };
 		47384BA32E96FC5200ECB4B5 /* Citadel in Frameworks */ = {isa = PBXBuildFile; productRef = 47384BA22E96FC5200ECB4B5 /* Citadel */; };
 		47679DD22F33D7E3002F804C /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 47679DD12F33D7E3002F804C /* SwiftTerm */; };
@@ -59,6 +60,7 @@
 		A10000000000000000000002 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSCPShareExtension/ShareViewController.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000004 /* ShareRequestStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macSCP/Shared/Sharing/ShareRequestStore.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000006 /* MacSCPShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MacSCPShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000019 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = MacSCPShareExtension/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
 		4721B2902F2C013B00279B18 /* macSCPUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = macSCPUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		47384B732E96EB2800ECB4B5 /* macSCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = macSCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		477B69712F2A5F5900B7EBC3 /* macSCPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = macSCPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -115,7 +117,7 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		A10000000000000000000017 /* Share Extension */ = {isa = PBXGroup; children = (A10000000000000000000002 /* ShareViewController.swift */, A10000000000000000000004 /* ShareRequestStore.swift */, ); name = "Share Extension"; sourceTree = "<group>"; };
+		A10000000000000000000017 /* Share Extension */ = {isa = PBXGroup; children = (A10000000000000000000002 /* ShareViewController.swift */, A10000000000000000000004 /* ShareRequestStore.swift */, A10000000000000000000019 /* Localizable.xcstrings */, ); name = "Share Extension"; sourceTree = "<group>"; };
 		47384B6A2E96EB2800ECB4B5 = {
 			isa = PBXGroup;
 			children = (
@@ -264,6 +266,7 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
 			);
 			mainGroup = 47384B6A2E96EB2800ECB4B5;
 			minimizedProjectReferenceProxies = 1;
@@ -288,7 +291,7 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		A10000000000000000000013 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A10000000000000000000013 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000018 /* Localizable.xcstrings in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
 		4721B28E2F2C013B00279B18 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;

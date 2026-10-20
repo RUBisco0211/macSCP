@@ -13,15 +13,15 @@ enum ClipboardOperation: String, Sendable {
 
     var displayName: String {
         switch self {
-        case .copy: return "Copy"
-        case .cut: return "Cut"
+        case .copy: return String(localized: "Copy")
+        case .cut: return String(localized: "Cut")
         }
     }
 
     var pastTense: String {
         switch self {
-        case .copy: return "Copied"
-        case .cut: return "Cut"
+        case .copy: return String(localized: "Copied")
+        case .cut: return String(localized: "Cut")
         }
     }
 
@@ -95,13 +95,14 @@ struct ClipboardState: Sendable {
 
     var displayText: String {
         guard !isEmpty, let op = operation else {
-            return "Clipboard empty"
+            return String(localized: "Clipboard empty")
         }
 
         if items.count == 1 {
-            return "\(op.pastTense): \(items[0].fileName)"
+            return String(localized: "\(op.pastTense): \(items[0].fileName)")
         }
-        return "\(op.pastTense): \(items.count) items"
+        let itemsText = String(localized: "\(items.count) items")
+        return String(localized: "\(op.pastTense): \(itemsText)")
     }
 
     var connectionId: UUID? {

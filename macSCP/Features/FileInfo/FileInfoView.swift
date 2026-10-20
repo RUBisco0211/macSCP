@@ -67,7 +67,7 @@ struct FileInfoView: View {
                 InfoRow(label: "Extension", value: viewModel.fileExtension)
             }
 
-            InfoRow(label: "Modified", value: viewModel.modificationDate)
+            InfoRow(label: "Modified Date", value: viewModel.modificationDate)
         }
     }
 
@@ -96,18 +96,24 @@ struct FileInfoView: View {
 
     private var directorySection: some View {
         InfoSection(title: "Directory Info") {
-            InfoRow(label: "Type", value: "Folder")
+            InfoRow(label: "Type", value: String(localized: "Folder"))
         }
     }
 
     private var fileSection: some View {
         InfoSection(title: "File Info") {
-            InfoRow(label: "Hidden", value: viewModel.isHidden ? "Yes" : "No")
-            InfoRow(label: "Executable", value: viewModel.isExecutable ? "Yes" : "No")
-            InfoRow(label: "Editable", value: viewModel.isEditable ? "Yes" : "No")
+            InfoRow(
+                label: "Hidden",
+                value: viewModel.isHidden ? String(localized: "Yes") : String(localized: "No"))
+            InfoRow(
+                label: "Executable",
+                value: viewModel.isExecutable ? String(localized: "Yes") : String(localized: "No"))
+            InfoRow(
+                label: "Editable",
+                value: viewModel.isEditable ? String(localized: "Yes") : String(localized: "No"))
 
             if viewModel.isSymlink {
-                InfoRow(label: "Symlink", value: "Yes")
+                InfoRow(label: "Symlink", value: String(localized: "Yes"))
             }
         }
     }
@@ -115,7 +121,7 @@ struct FileInfoView: View {
 
 // MARK: - Info Section
 private struct InfoSection<Content: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -129,14 +135,16 @@ private struct InfoSection<Content: View>: View {
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.controlBackgroundColor), in: RoundedRectangle(cornerRadius: UIConstants.smallCornerRadius))
+            .background(
+                Color(.controlBackgroundColor),
+                in: RoundedRectangle(cornerRadius: UIConstants.smallCornerRadius))
         }
     }
 }
 
 // MARK: - Info Row
 private struct InfoRow: View {
-    let label: String
+    let label: LocalizedStringKey
     let value: String
 
     var body: some View {
@@ -157,15 +165,16 @@ private struct InfoRow: View {
 
 // MARK: - Preview
 #Preview {
-    FileInfoView(viewModel: FileInfoViewModel(
-        file: RemoteFile(
-            name: "example.swift",
-            path: "/home/user/projects/example.swift",
-            isDirectory: false,
-            size: 4096,
-            permissions: "-rw-r--r--",
-            modificationDate: Date()
-        ),
-        connectionName: "Production Server"
-    ))
+    FileInfoView(
+        viewModel: FileInfoViewModel(
+            file: RemoteFile(
+                name: "example.swift",
+                path: "/home/user/projects/example.swift",
+                isDirectory: false,
+                size: 4096,
+                permissions: "-rw-r--r--",
+                modificationDate: Date()
+            ),
+            connectionName: "Production Server"
+        ))
 }

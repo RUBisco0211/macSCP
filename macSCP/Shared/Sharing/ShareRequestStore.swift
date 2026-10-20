@@ -28,11 +28,17 @@ struct ShareRequestStore: Sendable {
         var errorDescription: String? {
             switch self {
             case .invalidRequest:
-                return "The shared request is invalid or has expired. Please share the files again."
+                return String(
+                    localized:
+                        "The shared request is invalid or has expired. Please share the files again."
+                )
             case .unsupportedSource(let name):
-                return "Symbolic links and special files are not supported: \(name)"
+                return String(
+                    localized: "Symbolic links and special files are not supported: \(name)")
             case .duplicateName(let name):
-                return "Two selected items have the same name: \(name). Share them separately."
+                return String(
+                    localized:
+                        "Two selected items have the same name: \(name). Share them separately.")
             }
         }
     }

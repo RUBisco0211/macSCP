@@ -18,10 +18,10 @@ enum ShareConnectionPicker {
         popup.selectItem(at: 0)
 
         let alert = NSAlert()
-        alert.messageText = "Destination Connection"
+        alert.messageText = String(localized: "Destination Connection")
         alert.accessoryView = popup
-        alert.addButton(withTitle: "Connect")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: String(localized: "Connect"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         alert.window.initialFirstResponder = popup
 
         NSApp.setActivationPolicy(.regular)
@@ -39,7 +39,7 @@ enum ShareAlert {
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = message
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: String(localized: "OK"))
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         alert.runModal()
@@ -52,8 +52,8 @@ enum SharePasswordPrompt {
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = message
-        alert.addButton(withTitle: "Connect")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: String(localized: "Connect"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
 
         let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
         field.placeholderString = placeholder
