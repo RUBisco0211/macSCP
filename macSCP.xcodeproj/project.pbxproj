@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A10000000000000000000001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* ShareViewController.swift */; };
+		A10000000000000000000003 /* ShareRequestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* ShareRequestStore.swift */; };
+		A10000000000000000000005 /* MacSCPShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A10000000000000000000006 /* MacSCPShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4721B3DC2F2F229B00279B18 /* TelemetryClient in Frameworks */ = {isa = PBXBuildFile; productRef = 4721B3DB2F2F229B00279B18 /* TelemetryClient */; };
 		47384BA32E96FC5200ECB4B5 /* Citadel in Frameworks */ = {isa = PBXBuildFile; productRef = 47384BA22E96FC5200ECB4B5 /* Citadel */; };
 		47679DD22F33D7E3002F804C /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 47679DD12F33D7E3002F804C /* SwiftTerm */; };
@@ -17,6 +20,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		A10000000000000000000007 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47384B6B2E96EB2800ECB4B5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000000000000000000010;
+			remoteInfo = MacSCPShareExtension;
+		};
 		4721B2962F2C013B00279B18 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 47384B6B2E96EB2800ECB4B5 /* Project object */;
@@ -33,7 +43,22 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		A10000000000000000000008 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (A10000000000000000000005 /* MacSCPShareExtension.appex in Embed App Extensions */, );
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		A10000000000000000000002 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSCPShareExtension/ShareViewController.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000004 /* ShareRequestStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macSCP/Shared/Sharing/ShareRequestStore.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000006 /* MacSCPShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MacSCPShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4721B2902F2C013B00279B18 /* macSCPUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = macSCPUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		47384B732E96EB2800ECB4B5 /* macSCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = macSCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		477B69712F2A5F5900B7EBC3 /* macSCPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = macSCPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -58,6 +83,7 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		A10000000000000000000009 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		4721B28D2F2C013B00279B18 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -89,9 +115,11 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		A10000000000000000000017 /* Share Extension */ = {isa = PBXGroup; children = (A10000000000000000000002 /* ShareViewController.swift */, A10000000000000000000004 /* ShareRequestStore.swift */, ); name = "Share Extension"; sourceTree = "<group>"; };
 		47384B6A2E96EB2800ECB4B5 = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000017 /* Share Extension */,
 				47384B752E96EB2800ECB4B5 /* macSCP */,
 				477B69722F2A5F5900B7EBC3 /* macSCPTests */,
 				4721B2912F2C013B00279B18 /* macSCPUITests */,
@@ -103,6 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				47384B732E96EB2800ECB4B5 /* macSCP.app */,
+				A10000000000000000000006 /* MacSCPShareExtension.appex */,
 				477B69712F2A5F5900B7EBC3 /* macSCPTests.xctest */,
 				4721B2902F2C013B00279B18 /* macSCPUITests.xctest */,
 			);
@@ -112,6 +141,22 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A10000000000000000000010 /* MacSCPShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000011 /* Build configuration list for MacSCPShareExtension */;
+			buildPhases = (
+				A10000000000000000000012 /* Sources */,
+				A10000000000000000000009 /* Frameworks */,
+				A10000000000000000000013 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = MacSCPShareExtension;
+			packageProductDependencies = ();
+			productName = MacSCPShareExtension;
+			productReference = A10000000000000000000006 /* MacSCPShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		4721B28F2F2C013B00279B18 /* macSCPUITests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4721B2982F2C013B00279B18 /* Build configuration list for PBXNativeTarget "macSCPUITests" */;
@@ -142,11 +187,13 @@
 				47384B6F2E96EB2800ECB4B5 /* Sources */,
 				47384B702E96EB2800ECB4B5 /* Frameworks */,
 				47384B712E96EB2800ECB4B5 /* Resources */,
+				A10000000000000000000008 /* Embed App Extensions */,
 				47A0B1C22F4A000100000001 /* Stamp Version from Git Tag */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A10000000000000000000014 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				47384B752E96EB2800ECB4B5 /* macSCP */,
@@ -232,6 +279,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				A10000000000000000000010 /* MacSCPShareExtension */,
 				47384B722E96EB2800ECB4B5 /* macSCP */,
 				477B69702F2A5F5900B7EBC3 /* macSCPTests */,
 				4721B28F2F2C013B00279B18 /* macSCPUITests */,
@@ -240,6 +288,7 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		A10000000000000000000013 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		4721B28E2F2C013B00279B18 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -282,6 +331,7 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		A10000000000000000000012 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001 /* ShareViewController.swift in Sources */, A10000000000000000000003 /* ShareRequestStore.swift in Sources */, ); runOnlyForDeploymentPostprocessing = 0; };
 		4721B28C2F2C013B00279B18 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -306,6 +356,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		A10000000000000000000014 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A10000000000000000000010 /* MacSCPShareExtension */; targetProxy = A10000000000000000000007 /* PBXContainerItemProxy */; };
 		4721B2972F2C013B00279B18 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 47384B722E96EB2800ECB4B5 /* macSCP */;
@@ -319,6 +370,46 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		A10000000000000000000015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = MacSCPShareExtension/MacSCPShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 02122026;
+				DEVELOPMENT_TEAM = NW7K6UFA6P;
+				ENABLE_APP_SANDBOX = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MacSCPShareExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", );
+				MARKETING_VERSION = 0.2.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.macscp.macSCP.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A10000000000000000000016 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = MacSCPShareExtension/MacSCPShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 02122026;
+				DEVELOPMENT_TEAM = NW7K6UFA6P;
+				ENABLE_APP_SANDBOX = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MacSCPShareExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", );
+				MARKETING_VERSION = 0.2.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.macscp.macSCP.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		4721B2992F2C013B00279B18 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -606,6 +697,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A10000000000000000000011 /* Build configuration list for MacSCPShareExtension */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000015 /* Debug */, A10000000000000000000016 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 		4721B2982F2C013B00279B18 /* Build configuration list for PBXNativeTarget "macSCPUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

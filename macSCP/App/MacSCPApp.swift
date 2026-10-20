@@ -5,18 +5,25 @@
 //  Main application entry point
 //
 
-import SwiftUI
-import SwiftData
 import Sparkle
+import SwiftData
+import SwiftUI
 
 @main
 struct MacSCPApp: App {
+    @NSApplicationDelegateAdaptor(ShareApplicationDelegate.self) private var applicationDelegate
     @StateObject private var container = DependencyContainer.shared
 
     private let updaterController: SPUStandardUpdaterController
     @StateObject private var checkForUpdatesViewModel: CheckForUpdatesViewModel
 
     init() {
+        do {
+            try ShareRequestStore.appStore().removeExpiredRequests()
+        } catch {
+            logError(
+                "Share staging cleanup unavailable: \(error.localizedDescription)", category: .app)
+        }
         AnalyticsService.initialize()
         AppLockManager.shared.lockIfNeeded()
 
@@ -39,6 +46,12 @@ struct MacSCPApp: App {
         }
         .modelContainer(container.modelContainer)
         .defaultSize(WindowSize.main)
+        .defaultLaunchBehavior(
+            ShareApplicationDelegate.isShareImportLaunch ? .suppressed : .automatic
+        )
+        .restorationBehavior(
+            ShareApplicationDelegate.isShareImportLaunch ? .disabled : .automatic
+        )
         .commands {
             appCommands
         }
@@ -52,6 +65,9 @@ struct MacSCPApp: App {
         }
         .modelContainer(container.modelContainer)
         .defaultSize(WindowSize.fileBrowser)
+        .restorationBehavior(
+            ShareApplicationDelegate.isShareImportLaunch ? .disabled : .automatic
+        )
 
         // File Editor Window
         WindowGroup(id: WindowID.fileEditor, for: String.self) { $windowId in
@@ -62,6 +78,9 @@ struct MacSCPApp: App {
         }
         .modelContainer(container.modelContainer)
         .defaultSize(WindowSize.fileEditor)
+        .restorationBehavior(
+            ShareApplicationDelegate.isShareImportLaunch ? .disabled : .automatic
+        )
 
         // File Info Window
         WindowGroup(id: WindowID.fileInfo, for: String.self) { $windowId in
@@ -73,6 +92,9 @@ struct MacSCPApp: App {
         .modelContainer(container.modelContainer)
         .defaultSize(WindowSize.fileInfo)
         .windowResizability(.contentSize)
+        .restorationBehavior(
+            ShareApplicationDelegate.isShareImportLaunch ? .disabled : .automatic
+        )
 
         // Terminal Window
         WindowGroup(id: WindowID.terminal, for: String.self) { $windowId in
@@ -83,6 +105,9 @@ struct MacSCPApp: App {
         }
         .modelContainer(container.modelContainer)
         .defaultSize(WindowSize.terminal)
+        .restorationBehavior(
+            ShareApplicationDelegate.isShareImportLaunch ? .disabled : .automatic
+        )
 
         // Settings Window (Cmd+,)
         Settings {

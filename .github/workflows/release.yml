@@ -3,11 +3,11 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'  # Triggers on version tags like v0.2.1
-  workflow_dispatch:  # Allows manual trigger from GitHub UI
+      - "v*" # Triggers on version tags like v0.2.1
+  workflow_dispatch: # Allows manual trigger from GitHub UI
     inputs:
       version:
-        description: 'Version number (e.g., 0.2.1)'
+        description: "Version number (e.g., 0.2.1)"
         required: true
         type: string
 
@@ -66,8 +66,7 @@ jobs:
             CURRENT_PROJECT_VERSION=${{ steps.version.outputs.build_number }} \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM="" \
-            CODE_SIGNING_ALLOWED=NO
+            DEVELOPMENT_TEAM=""
 
       - name: Export App
         run: |
@@ -76,20 +75,54 @@ jobs:
             -exportPath build \
             -exportOptionsPlist exportOptions.plist
 
+      - name: Verify embedded share extension
+        run: |
+          set -euo pipefail
+          APP="build/${{ env.APP_NAME }}.app"
+          EXT="$APP/Contents/PlugIns/MacSCPShareExtension.appex"
+          test -d "$EXT"
+          /usr/libexec/PlistBuddy -c 'Print :NSExtension:NSExtensionPointIdentifier' \
+            "$EXT/Contents/Info.plist"
+          codesign --verify --strict "$APP"
+          codesign --verify --strict "$EXT"
+
       - name: Create DMG
         run: |
+          set -euo pipefail
           DMG_NAME="${{ env.APP_NAME }}-${{ steps.version.outputs.version }}.dmg"
+          RW_DMG="build/${{ env.APP_NAME }}-rw.dmg"
+          MOUNT_DIR="build/dmg-mount"
 
           # Create staging directory
           mkdir -p dmg-staging
           cp -R "build/${{ env.APP_NAME }}.app" dmg-staging/
           ln -s /Applications dmg-staging/Applications
 
-          # Create DMG
+          # A custom volume icon must be written to a read-write image first;
+          # it also becomes the .dmg file icon shown in Finder.
+          rm -f "$DMG_NAME" "$RW_DMG"
+          rm -rf "$MOUNT_DIR"
+          mkdir -p "$MOUNT_DIR"
+
           hdiutil create -volname "${{ env.APP_NAME }}" \
             -srcfolder dmg-staging \
-            -ov -format UDZO \
-            "$DMG_NAME"
+            -ov -format UDRW \
+            "$RW_DMG"
+
+          hdiutil attach "$RW_DMG" -nobrowse -mountpoint "$MOUNT_DIR"
+
+          ICON_PATH="$MOUNT_DIR/${{ env.APP_NAME }}.app/Contents/Resources/AppIcon.icns"
+          if [ -f "$ICON_PATH" ]; then
+            cp "$ICON_PATH" "$MOUNT_DIR/.VolumeIcon.icns"
+            SetFile -a C "$MOUNT_DIR"
+          else
+            echo "WARNING: AppIcon.icns not found; using the default volume icon"
+          fi
+
+          hdiutil detach "$MOUNT_DIR"
+
+          hdiutil convert "$RW_DMG" -format UDZO -o "$DMG_NAME"
+          rm -f "$RW_DMG"
 
           echo "dmg_name=$DMG_NAME" >> $GITHUB_OUTPUT
           echo "Created: $DMG_NAME"

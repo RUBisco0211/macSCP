@@ -18,12 +18,12 @@ final class DataStore {
         do {
             let schema = Schema([
                 ConnectionEntity.self,
-                FolderEntity.self
+                FolderEntity.self,
             ])
 
             let modelConfiguration = ModelConfiguration(
                 schema: schema,
-                isStoredInMemoryOnly: false,
+                url: Self.storeURL,
                 allowsSave: true
             )
 
@@ -41,6 +41,14 @@ final class DataStore {
 
     var modelContext: ModelContext {
         modelContainer.mainContext
+    }
+
+    /// The app group entitlement makes SwiftData default to a group container.
+    /// Keep the pre-existing store location so upgrades keep their connections,
+    /// and so unsigned/ad-hoc builds do not fail to write the database.
+    nonisolated static var storeURL: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("default.store")
     }
 
     /// Creates a new background context for async operations

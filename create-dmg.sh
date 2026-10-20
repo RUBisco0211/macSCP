@@ -53,12 +53,34 @@ cp -R "${BUILD_DIR}/${APP_NAME}.app" "${DMG_DIR}/"
 ln -s /Applications "${DMG_DIR}/Applications"
 
 # Create DMG
+# A custom volume icon has to be written to a read-write image first, then the
+# image is compressed. The icon also becomes the .dmg file icon in Finder.
 echo "💿 Creating DMG..."
-rm -f "${FINAL_DMG}"
+RW_DMG="${BUILD_DIR}/${APP_NAME}-rw.dmg"
+MOUNT_DIR="${BUILD_DIR}/dmg-mount"
+rm -f "${FINAL_DMG}" "${RW_DMG}"
+rm -rf "${MOUNT_DIR}"
+mkdir -p "${MOUNT_DIR}"
+
 hdiutil create -volname "${APP_NAME}" \
     -srcfolder "${DMG_DIR}" \
-    -ov -format UDZO \
-    "${FINAL_DMG}"
+    -ov -format UDRW \
+    "${RW_DMG}"
+
+hdiutil attach "${RW_DMG}" -nobrowse -mountpoint "${MOUNT_DIR}"
+
+ICON_PATH="${MOUNT_DIR}/${APP_NAME}.app/Contents/Resources/AppIcon.icns"
+if [ -f "${ICON_PATH}" ]; then
+    cp "${ICON_PATH}" "${MOUNT_DIR}/.VolumeIcon.icns"
+    SetFile -a C "${MOUNT_DIR}"
+else
+    echo "⚠️  AppIcon.icns not found; using the default volume icon"
+fi
+
+hdiutil detach "${MOUNT_DIR}"
+
+hdiutil convert "${RW_DMG}" -format UDZO -o "${FINAL_DMG}"
+rm -f "${RW_DMG}"
 
 echo "✨ DMG created successfully: ${FINAL_DMG}"
 echo ""
