@@ -3,11 +3,11 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'  # Triggers on version tags like v0.2.1
-  workflow_dispatch:  # Allows manual trigger from GitHub UI
+      - "v*" # Triggers on version tags like v0.2.1
+  workflow_dispatch: # Allows manual trigger from GitHub UI
     inputs:
       version:
-        description: 'Version number (e.g., 0.2.1)'
+        description: "Version number (e.g., 0.2.1)"
         required: true
         type: string
 
@@ -66,8 +66,7 @@ jobs:
             CURRENT_PROJECT_VERSION=${{ steps.version.outputs.build_number }} \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM="" \
-            CODE_SIGNING_ALLOWED=NO
+            DEVELOPMENT_TEAM=""
 
       - name: Export App
         run: |
@@ -75,6 +74,22 @@ jobs:
             -archivePath build/${{ env.APP_NAME }}.xcarchive \
             -exportPath build \
             -exportOptionsPlist exportOptions.plist
+
+      - name: Verify embedded share extension
+        run: |
+          set -euo pipefail
+          APP="build/${{ env.APP_NAME }}.app"
+          EXT="$APP/Contents/PlugIns/MacSCPShareExtension.appex"
+          test -d "$EXT"
+          /usr/libexec/PlistBuddy -c 'Print :NSExtension:NSExtensionPointIdentifier' \
+            "$EXT/Contents/Info.plist"
+          codesign --verify --strict "$APP"
+          codesign --verify --strict "$EXT"
+          APP_ENTITLEMENTS="$(codesign -d --entitlements :- "$APP" 2>&1 || true)"
+          EXT_ENTITLEMENTS="$(codesign -d --entitlements :- "$EXT" 2>&1 || true)"
+          printf '%s\n' "$APP_ENTITLEMENTS" | grep -q 'com.apple.security.application-groups'
+          printf '%s\n' "$EXT_ENTITLEMENTS" | grep -q 'com.apple.security.application-groups'
+          /usr/libexec/PlistBuddy -c 'Print ShareAppGroupIdentifier' "$APP/Contents/Info.plist"
 
       - name: Create DMG
         run: |
