@@ -20,13 +20,19 @@ final class ShareImportSession {
             ownsRequest = request.id == id
             guard request.id == id, !request.sources.isEmpty else {
                 preparationError =
-                    "This share request contains no files or is invalid. Please share the files again."
+                    String(
+                        localized:
+                            "This share request contains no files or is invalid. Please share the files again."
+                    )
                 return
             }
             sources = request.sources
         } catch {
             preparationError =
-                "The shared files could not be prepared. They may have expired. Please share them again.\n\(error.localizedDescription)"
+                String(
+                    localized:
+                        "The shared files could not be prepared. They may have expired. Please share them again.\n\(error.localizedDescription)"
+                )
         }
     }
 
@@ -79,7 +85,10 @@ final class ShareImportSession {
             ownsRequest = false
         } catch {
             notice =
-                "The transfer has ended, but temporary shared files could not be removed. Closing this window will retry cleanup.\n\(error.localizedDescription)"
+                String(
+                    localized:
+                        "The transfer has ended, but temporary shared files could not be removed. Closing this window will retry cleanup.\n\(error.localizedDescription)"
+                )
         }
     }
 }

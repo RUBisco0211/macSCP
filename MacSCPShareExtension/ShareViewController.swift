@@ -41,7 +41,7 @@ final class ShareViewController: NSViewController {
     private func prepare() {
         guard preparation == nil else { return }
         state.error = nil
-        state.message = "Preparing shared files…"
+        state.message = String(localized: "Preparing shared files…")
         state.isPreparing = true
         let providers = (extensionContext?.inputItems as? [NSExtensionItem] ?? [])
             .flatMap { $0.attachments ?? [] }
@@ -69,7 +69,8 @@ final class ShareViewController: NSViewController {
                 var names: [String] = []
                 for (index, provider) in providers.enumerated() {
                     try Task.checkCancellation()
-                    state.message = "Preparing item \(index + 1) of \(providers.count)…"
+                    state.message = String(
+                        localized: "Preparing item \(index + 1) of \(providers.count)…")
                     let name = try await Self.stage(
                         provider, index: index, store: requestStore, draft: requestDraft)
                     names.append(name)
@@ -79,7 +80,7 @@ final class ShareViewController: NSViewController {
                 publishedID = request.id
                 sharePreparationLogger.info(
                     "Published share request \(request.id.uuidString, privacy: .public)")
-                state.message = "Opening macSCP…"
+                state.message = String(localized: "Opening macSCP…")
                 try await Self.openContainingApp(requestID: request.id)
                 sharePreparationLogger.info(
                     "Containing app opened for share request \(request.id.uuidString, privacy: .public)"
@@ -101,7 +102,7 @@ final class ShareViewController: NSViewController {
 
     private func cancel() {
         if state.isPreparing {
-            state.message = "Cancelling and cleaning up…"
+            state.message = String(localized: "Cancelling and cleaning up…")
             preparation?.cancel()
         } else {
             extensionContext?.cancelRequest(withError: CocoaError(.userCancelled))
@@ -275,9 +276,13 @@ private enum SharePreparationError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidSelection:
-            return "Select between 1 and 1,000 files or folders in Finder and share again."
+            return String(
+                localized: "Select between 1 and 1,000 files or folders in Finder and share again.")
         case .cannotOpenApp:
-            return "macSCP could not be opened. Keep the extension inside macSCP.app and try again."
+            return String(
+                localized:
+                    "macSCP could not be opened. Keep the extension inside macSCP.app and try again."
+            )
 
         }
     }
@@ -285,7 +290,7 @@ private enum SharePreparationError: LocalizedError {
 
 @MainActor
 private final class SharePreparationState: ObservableObject {
-    @Published var message = "Preparing shared files…"
+    @Published var message = String(localized: "Preparing shared files…")
     @Published var error: String?
     @Published var isPreparing = true
 }

@@ -18,7 +18,7 @@ struct ConnectionDetailView: View {
     private var iconColor: Color {
         switch connection.connectionType {
         case .sftp: return .blue
-        case .s3:   return .orange
+        case .s3: return .orange
         }
     }
 
@@ -142,7 +142,8 @@ struct ConnectionDetailView: View {
                 Divider().padding(.leading, 36)
                 contactDetailRow(label: "username", value: connection.username, icon: "person")
                 Divider().padding(.leading, 36)
-                contactDetailRow(label: "auth", value: connection.authMethod.displayName, icon: "key")
+                contactDetailRow(
+                    label: "auth", value: connection.authMethod.displayName, icon: "key")
                 if connection.authMethod == .privateKey, let keyPath = connection.privateKeyPath {
                     Divider().padding(.leading, 36)
                     contactDetailRow(label: "key path", value: keyPath, icon: "doc.text")
@@ -231,7 +232,9 @@ struct ConnectionDetailView: View {
 
     // MARK: - Detail Row
 
-    private func contactDetailRow(label: String, value: String, icon: String) -> some View {
+    private func contactDetailRow(label: LocalizedStringKey, value: String, icon: String)
+        -> some View
+    {
         HStack(alignment: .top) {
             Image(systemName: icon)
                 .font(.system(size: 14))
@@ -273,7 +276,7 @@ struct ConnectionDetailView: View {
 
 private struct ContactActionButton: View {
     let icon: String
-    let label: String
+    let label: LocalizedStringKey
     var isDestructive: Bool = false
     let action: () -> Void
 

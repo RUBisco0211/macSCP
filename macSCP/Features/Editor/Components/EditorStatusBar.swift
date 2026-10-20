@@ -50,7 +50,7 @@ struct EditorStatusBar: View {
 
 // MARK: - Stat Item
 private struct StatItem: View {
-    let label: String
+    let label: LocalizedStringKey
     let value: String
 
     var body: some View {
@@ -67,10 +67,11 @@ private struct StatItem: View {
 
 // MARK: - Preview
 #Preview {
-    EditorStatusBar(viewModel: FileEditorViewModel(
-        filePath: "/home/user/documents/test.txt",
-        fileName: "test.txt",
-        initialContent: "Hello, World!",
-        fileRepository: FileRepository(sftpSession: SFTPSession())
-    ))
+    EditorStatusBar(
+        viewModel: FileEditorViewModel(
+            filePath: "/home/user/documents/test.txt",
+            fileName: "test.txt",
+            initialContent: "Hello, World!",
+            fileRepository: FileRepository(sftpSession: SFTPSession())
+        ))
 }

@@ -93,9 +93,9 @@ final class FileEditorViewModel {
             return ""
         }
         if searchResults.isEmpty {
-            return "No results"
+            return String(localized: "No results")
         }
-        return "\(currentSearchIndex + 1) of \(searchResults.count)"
+        return String(localized: "\(currentSearchIndex + 1) of \(searchResults.count)")
     }
 
     // MARK: - File Operations
@@ -156,10 +156,11 @@ final class FileEditorViewModel {
         while let range = content.range(of: searchText, options: options, range: searchRange) {
             // Check whole word if enabled
             if isWholeWord {
-                let isWordBoundaryBefore = range.lowerBound == content.startIndex ||
-                    !content[content.index(before: range.lowerBound)].isLetter
-                let isWordBoundaryAfter = range.upperBound == content.endIndex ||
-                    !content[range.upperBound].isLetter
+                let isWordBoundaryBefore =
+                    range.lowerBound == content.startIndex
+                    || !content[content.index(before: range.lowerBound)].isLetter
+                let isWordBoundaryAfter =
+                    range.upperBound == content.endIndex || !content[range.upperBound].isLetter
 
                 if isWordBoundaryBefore && isWordBoundaryAfter {
                     results.append(range)
@@ -206,11 +207,14 @@ final class FileEditorViewModel {
             var currentIndex = content.startIndex
 
             while currentIndex < content.endIndex {
-                if let range = content.range(of: searchText, options: options, range: currentIndex..<content.endIndex) {
-                    let isWordBoundaryBefore = range.lowerBound == content.startIndex ||
-                        !content[content.index(before: range.lowerBound)].isLetter
-                    let isWordBoundaryAfter = range.upperBound == content.endIndex ||
-                        !content[range.upperBound].isLetter
+                if let range = content.range(
+                    of: searchText, options: options, range: currentIndex..<content.endIndex)
+                {
+                    let isWordBoundaryBefore =
+                        range.lowerBound == content.startIndex
+                        || !content[content.index(before: range.lowerBound)].isLetter
+                    let isWordBoundaryAfter =
+                        range.upperBound == content.endIndex || !content[range.upperBound].isLetter
 
                     newContent += content[currentIndex..<range.lowerBound]
 
@@ -229,7 +233,8 @@ final class FileEditorViewModel {
 
             content = newContent
         } else {
-            content = content.replacingOccurrences(of: searchText, with: replaceText, options: options)
+            content = content.replacingOccurrences(
+                of: searchText, with: replaceText, options: options)
         }
 
         search()

@@ -9,15 +9,16 @@
 //  own fallback.
 //
 
-import Foundation
 import Citadel
+import Foundation
 
 enum SSHConnectionErrorMapper {
     static func map(_ error: Error, keyType: SSHPrivateKeyLoader.KeyType?) -> AppError? {
         let description = error.localizedDescription.lowercased()
 
         if description.contains("connection refused") {
-            return .connectionFailed("Connection refused. Make sure the SSH server is running.")
+            return .connectionFailed(
+                String(localized: "Connection refused. Make sure the SSH server is running."))
         }
         if description.contains("host unreachable") || description.contains("no route to host") {
             return .hostUnreachable
@@ -34,7 +35,8 @@ enum SSHConnectionErrorMapper {
             return .authenticationFailed
         }
         if description.contains("operation not permitted") {
-            return .connectionFailed("Operation not permitted. Check firewall settings.")
+            return .connectionFailed(
+                String(localized: "Operation not permitted. Check firewall settings."))
         }
 
         return nil
@@ -46,9 +48,9 @@ enum SSHConnectionErrorMapper {
         if let sshError = error as? SSHClientError {
             switch sshError {
             case .allAuthenticationOptionsFailed,
-                 .unsupportedPrivateKeyAuthentication,
-                 .unsupportedPasswordAuthentication,
-                 .unsupportedHostBasedAuthentication:
+                .unsupportedPrivateKeyAuthentication,
+                .unsupportedPasswordAuthentication,
+                .unsupportedHostBasedAuthentication:
                 return true
             case .channelCreationFailed:
                 return false

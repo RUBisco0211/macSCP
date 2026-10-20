@@ -7,7 +7,9 @@ struct UploadConflictSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label(
-                conflict.destinationIsDirectory ? "Folder Already Exists" : "File Already Exists",
+                conflict.destinationIsDirectory
+                    ? String(localized: "Folder Already Exists")
+                    : String(localized: "File Already Exists"),
                 systemImage: conflict.destinationIsDirectory
                     ? "folder.badge.questionmark" : "doc.badge.ellipsis"
             )

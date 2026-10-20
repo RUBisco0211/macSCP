@@ -75,9 +75,9 @@ final class ConnectionListViewModel {
 
         if !searchText.isEmpty {
             result = result.filter { connection in
-                connection.name.localizedCaseInsensitiveContains(searchText) ||
-                connection.host.localizedCaseInsensitiveContains(searchText) ||
-                connection.username.localizedCaseInsensitiveContains(searchText)
+                connection.name.localizedCaseInsensitiveContains(searchText)
+                    || connection.host.localizedCaseInsensitiveContains(searchText)
+                    || connection.username.localizedCaseInsensitiveContains(searchText)
             }
         }
 
@@ -149,7 +149,8 @@ final class ConnectionListViewModel {
 
             await loadData()
             isShowingNewConnectionSheet = false
-            AnalyticsService.trackConnectionCreated(protocol: .init(from: connection.connectionType))
+            AnalyticsService.trackConnectionCreated(
+                protocol: .init(from: connection.connectionType))
             logInfo("Connection saved: \(connection.name)", category: .database)
         } catch {
             logError("Failed to save connection: \(error)", category: .database)
@@ -182,9 +183,12 @@ final class ConnectionListViewModel {
             await loadData()
             isShowingEditConnectionSheet = false
             connectionToEdit = nil
-            AnalyticsService.track(.connectionEdited, with: [
-                "protocol": AnalyticsService.ConnectionProtocol(from: connection.connectionType).rawValue
-            ])
+            AnalyticsService.track(
+                .connectionEdited,
+                with: [
+                    "protocol": AnalyticsService.ConnectionProtocol(from: connection.connectionType)
+                        .rawValue
+                ])
             logInfo("Connection updated: \(connection.name)", category: .database)
         } catch {
             logError("Failed to update connection: \(error)", category: .database)
@@ -205,9 +209,12 @@ final class ConnectionListViewModel {
                 selectedConnectionId = nil
             }
             await loadData()
-            AnalyticsService.track(.connectionDeleted, with: [
-                "protocol": AnalyticsService.ConnectionProtocol(from: connection.connectionType).rawValue
-            ])
+            AnalyticsService.track(
+                .connectionDeleted,
+                with: [
+                    "protocol": AnalyticsService.ConnectionProtocol(from: connection.connectionType)
+                        .rawValue
+                ])
             logInfo("Connection deleted: \(connection.name)", category: .database)
         } catch {
             logError("Failed to delete connection: \(error)", category: .database)
@@ -363,7 +370,8 @@ final class ConnectionListViewModel {
         let windowId = windowManager.storeFileBrowserData(data)
         logInfo("Stored window data with ID: \(windowId)", category: .ui)
         pendingWindowId = windowId
-        AnalyticsService.trackConnectionConnected(protocol: .init(from: connection.connectionType), success: true)
+        AnalyticsService.trackConnectionConnected(
+            protocol: .init(from: connection.connectionType), success: true)
         logInfo("Set pendingWindowId to: \(windowId)", category: .ui)
     }
 
@@ -501,7 +509,7 @@ final class ConnectionListViewModel {
 
     func duplicateConnection(_ connection: Connection) async {
         let newConnection = Connection(
-            name: "\(connection.name) Copy",
+            name: String(localized: "\(connection.name) Copy"),
             host: connection.host,
             port: connection.port,
             username: connection.username,

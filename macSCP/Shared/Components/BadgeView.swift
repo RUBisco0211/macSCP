@@ -168,10 +168,10 @@ struct StatusBadgeView: View {
 
         var defaultLabel: String {
             switch self {
-            case .online: return "Online"
-            case .offline: return "Offline"
-            case .busy: return "Busy"
-            case .away: return "Away"
+            case .online: return String(localized: "Online")
+            case .offline: return String(localized: "Offline")
+            case .busy: return String(localized: "Busy")
+            case .away: return String(localized: "Away")
             }
         }
     }

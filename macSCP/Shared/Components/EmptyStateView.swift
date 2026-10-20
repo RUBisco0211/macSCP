@@ -9,16 +9,16 @@ import SwiftUI
 
 struct EmptyStateView: View {
     let icon: String
-    let title: String
-    let message: String
-    let actionTitle: String?
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
+    let actionTitle: LocalizedStringKey?
     let action: (() -> Void)?
 
     init(
         icon: String,
-        title: String,
-        message: String,
-        actionTitle: String? = nil,
+        title: LocalizedStringKey,
+        message: LocalizedStringKey,
+        actionTitle: LocalizedStringKey? = nil,
         action: (() -> Void)? = nil
     ) {
         self.icon = icon

@@ -8,9 +8,9 @@
 import SwiftUI
 
 struct LoadingView: View {
-    let message: String
+    let message: LocalizedStringKey
 
-    init(message: String = "Loading...") {
+    init(message: LocalizedStringKey = "Loading...") {
         self.message = message
     }
 
@@ -31,9 +31,9 @@ struct LoadingView: View {
 
 // MARK: - Inline Loading
 struct InlineLoadingView: View {
-    let message: String
+    let message: LocalizedStringKey
 
-    init(message: String = "Loading...") {
+    init(message: LocalizedStringKey = "Loading...") {
         self.message = message
     }
 
@@ -55,9 +55,9 @@ struct InlineLoadingView: View {
 
 // MARK: - Overlay Loading
 struct LoadingOverlayView: View {
-    let message: String
+    let message: LocalizedStringKey
 
-    init(message: String = "Loading...") {
+    init(message: LocalizedStringKey = "Loading...") {
         self.message = message
     }
 
@@ -87,10 +87,10 @@ struct LoadingOverlayView: View {
 
 // MARK: - Pulsing Dot Loading
 struct PulsingLoadingView: View {
-    let message: String
+    let message: LocalizedStringKey
     @State private var isAnimating = false
 
-    init(message: String = "Loading...") {
+    init(message: LocalizedStringKey = "Loading...") {
         self.message = message
     }
 
@@ -111,8 +111,8 @@ struct PulsingLoadingView: View {
                         .opacity(isAnimating ? 1.0 : 0.3)
                         .animation(
                             .easeInOut(duration: 0.6)
-                            .repeatForever()
-                            .delay(Double(index) * 0.2),
+                                .repeatForever()
+                                .delay(Double(index) * 0.2),
                             value: isAnimating
                         )
                 }

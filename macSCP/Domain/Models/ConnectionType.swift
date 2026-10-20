@@ -32,9 +32,9 @@ enum ConnectionType: String, Codable, Sendable, CaseIterable {
     var description: String {
         switch self {
         case .sftp:
-            return "Secure File Transfer Protocol"
+            return String(localized: "Secure File Transfer Protocol")
         case .s3:
-            return "Amazon S3 / S3-Compatible Storage"
+            return String(localized: "Amazon S3 / S3-Compatible Storage")
         }
     }
 }

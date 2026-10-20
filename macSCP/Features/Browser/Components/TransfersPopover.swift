@@ -161,7 +161,7 @@ struct TransferItemView: View {
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                 } else if transfer.status == .failed {
-                    Text(transfer.error ?? "Transfer failed")
+                    Text(transfer.error ?? String(localized: "Transfer failed"))
                         .font(.system(size: 10))
                         .foregroundStyle(.red)
                         .lineLimit(1)
@@ -182,8 +182,10 @@ struct TransferItemView: View {
             .opacity(transfer.isInProgress || isHovering ? 1 : 0)
             .help(
                 transfer.isInProgress
-                    ? (transfer.transferType == .download ? "Cancel download" : "Cancel upload")
-                    : "Remove from list"
+                    ? (transfer.transferType == .download
+                        ? String(localized: "Cancel download")
+                        : String(localized: "Cancel upload"))
+                    : String(localized: "Remove from list")
             )
             .frame(width: 20, alignment: .center)
         }
@@ -201,18 +203,27 @@ struct TransferItemView: View {
     }
 
     private var accessibilityDescription: String {
-        let action = transfer.transferType == .download ? "downloading" : "uploading"
+        let action =
+            transfer.transferType == .download
+            ? String(localized: "downloading")
+            : String(localized: "uploading")
         switch transfer.status {
         case .inProgress:
-            return "\(transfer.fileName), \(action), \(transfer.percentCompleted) percent complete"
+            return String(
+                localized:
+                    "\(transfer.fileName), \(action), \(transfer.percentCompleted) percent complete"
+            )
         case .completed:
-            return "\(transfer.fileName), completed, \(transfer.totalSizeText)"
+            return String(localized: "\(transfer.fileName), completed, \(transfer.totalSizeText)")
         case .failed:
-            return "\(transfer.fileName), failed, \(transfer.error ?? "Transfer failed")"
+            return String(
+                localized:
+                    "\(transfer.fileName), failed, \(transfer.error ?? String(localized: "Transfer failed"))"
+            )
         case .cancelled:
-            return "\(transfer.fileName), cancelled"
+            return String(localized: "\(transfer.fileName), cancelled")
         case .pending:
-            return "\(transfer.fileName), pending"
+            return String(localized: "\(transfer.fileName), pending")
         }
     }
 
@@ -296,8 +307,8 @@ struct TransfersToolbarButton: View {
         .help("Transfers")
         .accessibilityLabel(
             viewModel.activeTransferCount > 0
-                ? "Transfers, \(viewModel.activeTransferCount) active"
-                : "Transfers")
+                ? String(localized: "Transfers, \(viewModel.activeTransferCount) active")
+                : String(localized: "Transfers"))
     }
 }
 

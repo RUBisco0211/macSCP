@@ -14,9 +14,9 @@ enum AuthMethod: String, Codable, Sendable, CaseIterable {
     var displayName: String {
         switch self {
         case .password:
-            return "Password"
+            return String(localized: "Password")
         case .privateKey:
-            return "Private Key"
+            return String(localized: "Private Key")
         }
     }
 

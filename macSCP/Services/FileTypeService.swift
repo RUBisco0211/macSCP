@@ -75,87 +75,87 @@ enum FileTypeService {
     /// Returns a human-readable description of the file type (Finder style)
     static func typeDescription(for file: RemoteFile) -> String {
         if file.isDirectory {
-            return "Folder"
+            return String(localized: "Folder")
         }
 
         if file.isSymlink {
-            return "Alias"
+            return String(localized: "Alias")
         }
 
         // Check for specific extensions first
         switch file.fileExtension.lowercased() {
         case "swift":
-            return "Swift Source"
+            return String(localized: "Swift Source")
         case "js":
-            return "JavaScript"
+            return String(localized: "JavaScript")
         case "ts":
-            return "TypeScript"
+            return String(localized: "TypeScript")
         case "py":
-            return "Python Script"
+            return String(localized: "Python Script")
         case "rb":
-            return "Ruby Script"
+            return String(localized: "Ruby Script")
         case "go":
-            return "Go Source"
+            return String(localized: "Go Source")
         case "rs":
-            return "Rust Source"
+            return String(localized: "Rust Source")
         case "java":
-            return "Java Source"
+            return String(localized: "Java Source")
         case "c":
-            return "C Source"
+            return String(localized: "C Source")
         case "cpp", "cc":
-            return "C++ Source"
+            return String(localized: "C++ Source")
         case "h":
-            return "C Header"
+            return String(localized: "C Header")
         case "hpp":
-            return "C++ Header"
+            return String(localized: "C++ Header")
         case "m":
-            return "Objective-C Source"
+            return String(localized: "Objective-C Source")
         case "html", "htm":
-            return "HTML Document"
+            return String(localized: "HTML Document")
         case "css":
-            return "CSS Stylesheet"
+            return String(localized: "CSS Stylesheet")
         case "json":
-            return "JSON"
+            return String(localized: "JSON")
         case "xml":
-            return "XML Document"
+            return String(localized: "XML Document")
         case "yaml", "yml":
-            return "YAML Document"
+            return String(localized: "YAML Document")
         case "md", "markdown":
-            return "Markdown Document"
+            return String(localized: "Markdown Document")
         case "txt":
-            return "Plain Text"
+            return String(localized: "Plain Text")
         case "pdf":
-            return "PDF Document"
+            return String(localized: "PDF Document")
         case "png":
-            return "PNG Image"
+            return String(localized: "PNG Image")
         case "jpg", "jpeg":
-            return "JPEG Image"
+            return String(localized: "JPEG Image")
         case "gif":
-            return "GIF Image"
+            return String(localized: "GIF Image")
         case "svg":
-            return "SVG Image"
+            return String(localized: "SVG Image")
         case "mp4":
-            return "MPEG-4 Movie"
+            return String(localized: "MPEG-4 Movie")
         case "mov":
-            return "QuickTime Movie"
+            return String(localized: "QuickTime Movie")
         case "mp3":
-            return "MP3 Audio"
+            return String(localized: "MP3 Audio")
         case "wav":
-            return "WAV Audio"
+            return String(localized: "WAV Audio")
         case "zip":
-            return "ZIP Archive"
+            return String(localized: "ZIP Archive")
         case "tar":
-            return "TAR Archive"
+            return String(localized: "TAR Archive")
         case "gz", "gzip":
-            return "Gzip Archive"
+            return String(localized: "Gzip Archive")
         case "dmg":
-            return "Disk Image"
+            return String(localized: "Disk Image")
         case "app":
-            return "Application"
+            return String(localized: "Application")
         case "xcodeproj":
-            return "Xcode Project"
+            return String(localized: "Xcode Project")
         case "xcworkspace":
-            return "Xcode Workspace"
+            return String(localized: "Xcode Workspace")
         default:
             break
         }
@@ -163,36 +163,36 @@ enum FileTypeService {
         // Fallback to general type
         switch file.fileType {
         case .directory:
-            return "Folder"
+            return String(localized: "Folder")
         case .text:
-            return "Plain Text"
+            return String(localized: "Plain Text")
         case .code:
-            return "Source Code"
+            return String(localized: "Source Code")
         case .image:
-            return "Image"
+            return String(localized: "Image")
         case .video:
-            return "Movie"
+            return String(localized: "Movie")
         case .audio:
-            return "Audio"
+            return String(localized: "Audio")
         case .archive:
-            return "Archive"
+            return String(localized: "Archive")
         case .document:
-            return "Document"
+            return String(localized: "Document")
         case .spreadsheet:
-            return "Spreadsheet"
+            return String(localized: "Spreadsheet")
         case .presentation:
-            return "Presentation"
+            return String(localized: "Presentation")
         case .pdf:
-            return "PDF Document"
+            return String(localized: "PDF Document")
         case .executable:
-            return "Unix Executable"
+            return String(localized: "Unix Executable")
         case .configuration:
-            return "Configuration"
+            return String(localized: "Configuration")
         case .unknown:
             if file.fileExtension.isEmpty {
-                return "Document"
+                return String(localized: "Document")
             }
-            return "Document"
+            return String(localized: "Document")
         }
     }
 
@@ -220,14 +220,14 @@ extension FileTypeService {
 
         let type: String
         switch permissions.first {
-        case "d": type = "Directory"
-        case "l": type = "Symbolic Link"
-        case "-": type = "File"
-        case "b": type = "Block Device"
-        case "c": type = "Character Device"
-        case "p": type = "Named Pipe"
-        case "s": type = "Socket"
-        default: type = "Unknown"
+        case "d": type = String(localized: "Directory")
+        case "l": type = String(localized: "Symbolic Link")
+        case "-": type = String(localized: "File")
+        case "b": type = String(localized: "Block Device")
+        case "c": type = String(localized: "Character Device")
+        case "p": type = String(localized: "Named Pipe")
+        case "s": type = String(localized: "Socket")
+        default: type = String(localized: "Unknown")
         }
 
         let permString = String(permissions.dropFirst())
@@ -235,14 +235,16 @@ extension FileTypeService {
         let group = formatPermissionGroup(String(permString.dropFirst(3).prefix(3)))
         let other = formatPermissionGroup(String(permString.suffix(3)))
 
-        return "\(type) - Owner: \(owner), Group: \(group), Others: \(other)"
+        return String(localized: "\(type) - Owner: \(owner), Group: \(group), Others: \(other)")
     }
 
     private static func formatPermissionGroup(_ perms: String) -> String {
         var result: [String] = []
-        if perms.contains("r") { result.append("Read") }
-        if perms.contains("w") { result.append("Write") }
-        if perms.contains("x") { result.append("Execute") }
-        return result.isEmpty ? "None" : result.joined(separator: ", ")
+        if perms.contains("r") { result.append(String(localized: "Read")) }
+        if perms.contains("w") { result.append(String(localized: "Write")) }
+        if perms.contains("x") { result.append(String(localized: "Execute")) }
+        return result.isEmpty
+            ? String(localized: "None")
+            : ListFormatter.localizedString(byJoining: result)
     }
 }

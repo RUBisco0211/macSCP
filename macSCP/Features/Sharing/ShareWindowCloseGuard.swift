@@ -66,11 +66,13 @@ final class ShareWindowCloseGuard: NSObject, NSWindowDelegate {
                     return
                 }
                 let alert = NSAlert()
-                alert.messageText = "Cancel transfers and close?"
-                alert.informativeText =
-                    "Transfers in this window will stop. Files already uploaded are not rolled back."
-                alert.addButton(withTitle: "Keep Window Open")
-                alert.addButton(withTitle: "Cancel Transfers and Close")
+                alert.messageText = String(localized: "Cancel transfers and close?")
+                alert.informativeText = String(
+                    localized:
+                        "Transfers in this window will stop. Files already uploaded are not rolled back."
+                )
+                alert.addButton(withTitle: String(localized: "Keep Window Open"))
+                alert.addButton(withTitle: String(localized: "Cancel Transfers and Close"))
                 let response = await alert.beginSheetModal(for: panel)
                 guard response == .alertSecondButtonReturn else { return }
             }

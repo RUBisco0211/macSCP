@@ -637,7 +637,7 @@ final class FileBrowserViewModel {
             "uploadSources: urls=\(urls.count) destination=\(destinationPath) uploading=\(isUploadingBatch) disconnecting=\(isDisconnecting)",
             category: .ui)
         guard !isUploadingBatch else {
-            error = .uploadFailed("Another upload batch is already running")
+            error = .uploadFailed(String(localized: "Another upload batch is already running"))
             return false
         }
         guard !isDisconnecting else {
@@ -729,7 +729,8 @@ final class FileBrowserViewModel {
                     atPath: entry.localURL.path)
                 let expected: FileAttributeType = entry.isDirectory ? .typeDirectory : .typeRegular
                 guard attributes[.type] as? FileAttributeType == expected else {
-                    throw AppError.uploadFailed("Source type changed: \(entry.localURL.path)")
+                    throw AppError.uploadFailed(
+                        String(localized: "Source type changed: \(entry.localURL.path)"))
                 }
                 var skipped = false
                 while true {
@@ -776,7 +777,8 @@ final class FileBrowserViewModel {
             }
             finishUpload(
                 transferID, status: .completed,
-                message: skippedEntries > 0 ? "Skipped \(skippedEntries) item(s)" : nil)
+                message: skippedEntries > 0
+                    ? String(localized: "Skipped \(skippedEntries) item(s)") : nil)
             if uploadedFiles > 0 {
                 AnalyticsService.trackFileUploaded(
                     protocol: .init(from: connection.connectionType),

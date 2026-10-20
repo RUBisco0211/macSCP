@@ -24,21 +24,21 @@ enum SSHPrivateKeyError: LocalizedError, Equatable, Sendable {
     var errorDescription: String? {
         switch self {
         case .unreadable(let path):
-            return "Cannot read the private key at \(path). Check the path and file permissions."
+            return String(localized: "Cannot read the private key at \(path). Check the path and file permissions.")
         case .unsupportedFormat:
-            return "This file is not an OpenSSH private key. Convert it with: ssh-keygen -p -f <key>"
+            return String(localized: "This file is not an OpenSSH private key. Convert it with: ssh-keygen -p -f <key>")
         case .legacyPEMFormat:
-            return "Legacy PEM private keys are not supported. Convert with: ssh-keygen -p -f <key>"
+            return String(localized: "Legacy PEM private keys are not supported. Convert with: ssh-keygen -p -f <key>")
         case .malformed:
-            return "The private key is damaged or in an unexpected format."
+            return String(localized: "The private key is damaged or in an unexpected format.")
         case .unsupportedKeyType(let type):
-            return "The \(type) key type is not supported. macSCP supports RSA and ed25519 keys."
+            return String(localized: "The \(type) key type is not supported. macSCP supports RSA and ed25519 keys.")
         case .passphraseRequired:
-            return "This key is protected by a passphrase, which is not supported yet. Use an unencrypted key."
+            return String(localized: "This key is protected by a passphrase, which is not supported yet. Use an unencrypted key.")
         case .incorrectPassphrase:
-            return "The passphrase for this private key is incorrect."
+            return String(localized: "The passphrase for this private key is incorrect.")
         case .unsupportedKeyEncryption(let rounds):
-            return "This key uses \(rounds) bcrypt KDF rounds, but the SSH library supports fewer than \(Self.maxSupportedBCryptRounds). Re-encrypt it with ssh-keygen -p -a 16 -f <key>."
+            return String(localized: "This key uses \(rounds) bcrypt KDF rounds, but the SSH library supports fewer than \(Self.maxSupportedBCryptRounds). Re-encrypt it with ssh-keygen -p -a 16 -f <key>.")
         }
     }
 
@@ -65,7 +65,7 @@ enum SSHPrivateKeyLoader {
 
     /// Shown when the server rejects an RSA key after every RFC 8332 variant has
     /// been offered.
-    static let rsaAuthenticationRejectedMessage = "The server rejected this RSA key. It was offered with rsa-sha2-512, rsa-sha2-256 and ssh-rsa; make sure the matching public key is authorized for this account."
+    static let rsaAuthenticationRejectedMessage = String(localized: "The server rejected this RSA key. It was offered with rsa-sha2-512, rsa-sha2-256 and ssh-rsa; make sure the matching public key is authorized for this account.")
 
     // MARK: - Public API
 

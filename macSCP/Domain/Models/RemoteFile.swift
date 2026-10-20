@@ -134,19 +134,19 @@ enum FileType: String, Sendable {
 
         // Code
         case "swift", "js", "ts", "jsx", "tsx", "py", "rb", "go", "rs", "java",
-             "kt", "c", "cpp", "h", "hpp", "m", "mm", "cs", "php", "html",
-             "htm", "css", "scss", "sass", "less", "sql", "sh", "bash", "zsh",
-             "fish", "ps1", "bat", "cmd":
+            "kt", "c", "cpp", "h", "hpp", "m", "mm", "cs", "php", "html",
+            "htm", "css", "scss", "sass", "less", "sql", "sh", "bash", "zsh",
+            "fish", "ps1", "bat", "cmd":
             return .code
 
         // Configuration
         case "json", "yaml", "yml", "xml", "plist", "ini", "conf", "config",
-             "env", "gitignore", "dockerfile", "makefile", "toml":
+            "env", "gitignore", "dockerfile", "makefile", "toml":
             return .configuration
 
         // Image
         case "jpg", "jpeg", "png", "gif", "bmp", "svg", "webp", "ico", "tiff",
-             "tif", "heic", "heif", "raw":
+            "tif", "heic", "heif", "raw":
             return .image
 
         // Video
@@ -189,7 +189,9 @@ enum FileType: String, Sendable {
 
 // MARK: - Sorting
 extension RemoteFile {
-    static func sortedFiles(_ files: [RemoteFile], by criteria: SortCriteria, ascending: Bool = true) -> [RemoteFile] {
+    static func sortedFiles(
+        _ files: [RemoteFile], by criteria: SortCriteria, ascending: Bool = true
+    ) -> [RemoteFile] {
         files.sorted { file1, file2 in
             // Directories always come first
             if file1.isDirectory != file2.isDirectory {
@@ -219,5 +221,14 @@ extension RemoteFile {
         case size = "Size"
         case date = "Date Modified"
         case type = "Type"
+
+        var displayName: String {
+            switch self {
+            case .name: return String(localized: "Name")
+            case .size: return String(localized: "Size")
+            case .date: return String(localized: "Date Modified")
+            case .type: return String(localized: "Type")
+            }
+        }
     }
 }

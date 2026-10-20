@@ -58,9 +58,9 @@ struct ConnectionListColumn: View {
     private var listTitle: String {
         switch viewModel.selectedSidebarItem {
         case .allConnections:
-            return "All Connections"
+            return String(localized: "All Connections")
         case .folder(let id):
-            return viewModel.folders.first { $0.id == id }?.name ?? "Folder"
+            return viewModel.folders.first { $0.id == id }?.name ?? String(localized: "Folder")
         }
     }
 
@@ -72,7 +72,8 @@ struct ConnectionListColumn: View {
                 EmptyStateView(
                     icon: "server.rack",
                     title: "No Connections",
-                    message: "Add a new SSH connection to get started\nwith remote file management.",
+                    message:
+                        "Add a new SSH connection to get started\nwith remote file management.",
                     actionTitle: "Add Connection"
                 ) {
                     viewModel.isShowingNewConnectionSheet = true
@@ -81,7 +82,8 @@ struct ConnectionListColumn: View {
                 EmptyStateView(
                     icon: "folder",
                     title: "Empty Folder",
-                    message: "This folder has no connections.\nDrag connections here or create a new one.",
+                    message:
+                        "This folder has no connections.\nDrag connections here or create a new one.",
                     actionTitle: "Add Connection"
                 ) {
                     viewModel.isShowingNewConnectionSheet = true
@@ -93,7 +95,8 @@ struct ConnectionListColumn: View {
     }
 
     private var connectionList: some View {
-        List(viewModel.filteredConnections, selection: $viewModel.selectedConnectionId) { connection in
+        List(viewModel.filteredConnections, selection: $viewModel.selectedConnectionId) {
+            connection in
             ConnectionRowView(connection: connection)
                 .draggable(connection)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
