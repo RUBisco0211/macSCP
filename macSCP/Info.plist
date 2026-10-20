@@ -1,7 +1,21 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>ShareAppGroupIdentifier</key>
+    <string>$(SHARE_APP_GROUP_IDENTIFIER)</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.macscp.macSCP.share-import</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>macscp</string>
+            </array>
+        </dict>
+    </array>
     <key>UTExportedTypeDeclarations</key>
     <array>
         <dict>
@@ -14,15 +28,16 @@
             <key>UTTypeIdentifier</key>
             <string>com.macnev2013.macSCP.connection</string>
             <key>UTTypeTagSpecification</key>
-            <dict/>
+            <dict />
         </dict>
     </array>
     <key>SUFeedURL</key>
-    <string>https://raw.githubusercontent.com/macnev2013/macSCP/main/appcast.xml</string>
+    <string
+        >https://raw.githubusercontent.com/macnev2013/macSCP/main/appcast.xml</string>
     <key>SUPublicEDKey</key>
     <string>fkQ0x2i5js+9C0o32jJlZOUhNV3zCAC74nKKSUu1cUI=</string>
     <key>SUEnableAutomaticChecks</key>
-    <true/>
+    <true />
     <key>SUScheduledCheckInterval</key>
     <integer>86400</integer>
 </dict>

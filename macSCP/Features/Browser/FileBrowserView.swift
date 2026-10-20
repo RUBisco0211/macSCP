@@ -11,8 +11,26 @@ struct FileBrowserView: View {
     @Bindable var viewModel: FileBrowserViewModel
     @Environment(\.openWindow) private var openWindow
 
-    init(viewModel: FileBrowserViewModel) {
+    private let pendingUploadSources: [URL]
+    private let onUploadFinished: (() -> Void)?
+    private let onCancelPendingUpload: (() async -> Void)?
+    private let disconnectOnDisappear: Bool
+    @State private var uploadDestination: String?
+
+    @State private var isHandlingPendingUpload = false
+
+    init(
+        viewModel: FileBrowserViewModel,
+        pendingUploadSources: [URL] = [],
+        onUploadFinished: (() -> Void)? = nil,
+        onCancelPendingUpload: (() async -> Void)? = nil,
+        disconnectOnDisappear: Bool = true
+    ) {
         self.viewModel = viewModel
+        self.pendingUploadSources = pendingUploadSources
+        self.onUploadFinished = onUploadFinished
+        self.onCancelPendingUpload = onCancelPendingUpload
+        self.disconnectOnDisappear = disconnectOnDisappear
     }
 
     var body: some View {
@@ -34,12 +52,24 @@ struct FileBrowserView: View {
 
             Divider()
 
+            if !pendingUploadSources.isEmpty {
+                pendingUploadBar
+                Divider()
+            }
+
             // Status Bar
             statusBar
         }
-        .frame(minWidth: WindowSize.minFileBrowser.width, minHeight: WindowSize.minFileBrowser.height)
-        .navigationTitle(viewModel.currentPath == "/" ? viewModel.connection.name : (viewModel.currentPath as NSString).lastPathComponent)
-        .navigationSubtitle(viewModel.isConnected ? viewModel.connection.connectionString : "Disconnected")
+        .frame(
+            minWidth: WindowSize.minFileBrowser.width, minHeight: WindowSize.minFileBrowser.height
+        )
+        .navigationTitle(
+            viewModel.currentPath == "/"
+                ? viewModel.connection.name : (viewModel.currentPath as NSString).lastPathComponent
+        )
+        .navigationSubtitle(
+            viewModel.isConnected ? viewModel.connection.connectionString : "Disconnected"
+        )
         .toolbar(id: "browserToolbar") {
             // Navigation group
             ToolbarItem(id: "back", placement: .navigation) {
@@ -83,12 +113,16 @@ struct FileBrowserView: View {
             }
 
             ToolbarItem(id: "upload", placement: .primaryAction) {
-                Button {
-                    Task { await viewModel.uploadFiles() }
-                } label: {
-                    Label("Upload", systemImage: "square.and.arrow.up")
+                // A share session has its own confirmed destination action. A modal
+                // NSOpenPanel opened from inside the app-modal share panel blocks input.
+                if pendingUploadSources.isEmpty {
+                    Button {
+                        Task { await viewModel.uploadFiles() }
+                    } label: {
+                        Label("Upload", systemImage: "square.and.arrow.up")
+                    }
+                    .help("Upload Files")
                 }
-                .help("Upload Files")
             }
 
             ToolbarItem(id: "delete", placement: .primaryAction) {
@@ -148,7 +182,9 @@ struct FileBrowserView: View {
                             HStack {
                                 Text(criteria.rawValue)
                                 if viewModel.sortCriteria == criteria {
-                                    Image(systemName: viewModel.sortAscending ? "chevron.up" : "chevron.down")
+                                    Image(
+                                        systemName: viewModel.sortAscending
+                                            ? "chevron.up" : "chevron.down")
                                 }
                             }
                         }
@@ -211,12 +247,31 @@ struct FileBrowserView: View {
             }
         } message: {
             let count = viewModel.filesToDelete.count
-            Text("Are you sure you want to delete \(count) item\(count == 1 ? "" : "s")? This cannot be undone.")
+            Text(
+                "Are you sure you want to delete \(count) item\(count == 1 ? "" : "s")? This cannot be undone."
+            )
+        }
+
+        .sheet(
+            item: Binding(
+                get: { viewModel.pendingUploadConflict },
+                set: { _ in }
+            )
+        ) { conflict in
+            UploadConflictSheet(conflict: conflict) { decision in
+                viewModel.resolveUploadConflict(decision, for: conflict.id)
+            }
+            .appLockOverlay()
+            .onDisappear {
+                viewModel.resolveUploadConflict(.cancel, for: conflict.id)
+            }
         }
         .errorAlert($viewModel.error)
         .onDisappear {
-            Task {
-                await viewModel.disconnect()
+            if disconnectOnDisappear {
+                Task {
+                    await viewModel.disconnect()
+                }
             }
         }
         .onChange(of: viewModel.pendingFileInfoWindowId) { _, windowId in
@@ -281,7 +336,14 @@ struct FileBrowserView: View {
             Spacer()
 
             // Active transfers indicator (clicking opens the popover)
-            if viewModel.hasActiveTransfers {
+            if viewModel.isUploadingBatch && !viewModel.hasActiveTransfers {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Preparing upload…").font(.caption)
+                    Button("Cancel") { viewModel.cancelAllTransfers() }
+                        .font(.caption)
+                }
+            } else if viewModel.hasActiveTransfers {
                 ActiveTransfersIndicator(viewModel: viewModel)
             }
 
@@ -308,6 +370,81 @@ struct FileBrowserView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(.bar)
+    }
+
+    private var pendingUploadBar: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SharedUploadPreview(sources: pendingUploadSources)
+            HStack(spacing: 12) {
+                Text("Destination: \(uploadDestination ?? viewModel.currentPath)")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .textSelection(.enabled)
+                if isHandlingPendingUpload {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small)
+                        Text("Uploading…")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Button("Cancel", role: .cancel) {
+                    guard !isHandlingPendingUpload else { return }
+                    isHandlingPendingUpload = true
+                    Task {
+                        await onCancelPendingUpload?()
+                        isHandlingPendingUpload = false
+                    }
+                }
+                .disabled(isHandlingPendingUpload || viewModel.isUploadingBatch)
+                Button("Upload to This Folder") {
+                    uploadPendingSources()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(
+                    isHandlingPendingUpload || viewModel.isUploadingBatch || !viewModel.isConnected)
+            }
+
+        }
+        .padding(12)
+        .background(.bar)
+    }
+
+    private func uploadPendingSources() {
+        logInfo(
+            "Share upload tapped: sources=\(pendingUploadSources.count) handling=\(isHandlingPendingUpload) uploading=\(viewModel.isUploadingBatch) connected=\(viewModel.isConnected) locked=\(AppLockManager.shared.isLocked)",
+            category: .ui)
+        guard !pendingUploadSources.isEmpty, !isHandlingPendingUpload,
+            !viewModel.isUploadingBatch, viewModel.isConnected,
+            !AppLockManager.shared.isLocked
+        else {
+            logWarning("Share upload ignored by preflight guard", category: .ui)
+            return
+        }
+        let sources = pendingUploadSources
+        let destination = viewModel.currentPath
+        uploadDestination = destination
+        isHandlingPendingUpload = true
+        Task {
+            defer {
+                isHandlingPendingUpload = false
+                uploadDestination = nil
+            }
+            // A toolbar/drop upload may have started before this task began.
+            guard !viewModel.isUploadingBatch, viewModel.isConnected,
+                !AppLockManager.shared.isLocked
+            else {
+                logWarning("Share upload ignored after entering task", category: .ui)
+                viewModel.error = .uploadFailed("Upload could not start. Reconnect and try again.")
+                return
+            }
+            logInfo("Share upload starting for \(sources.count) item(s)", category: .ui)
+            let succeeded = await viewModel.uploadSources(sources, to: destination)
+            logInfo("Share upload finished: success=\(succeeded)", category: .ui)
+            if succeeded { onUploadFinished?() }
+        }
     }
 
     private func openFileInEditor(_ file: RemoteFile) {

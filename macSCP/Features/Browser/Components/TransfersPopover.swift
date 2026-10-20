@@ -19,7 +19,13 @@ struct TransfersPopover: View {
             header
             Divider()
 
-            if viewModel.allTransfers.isEmpty {
+            if viewModel.isUploadingBatch && !viewModel.hasActiveTransfers {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text("Preparing upload…").font(.callout)
+                }
+                .padding(24)
+            } else if viewModel.allTransfers.isEmpty {
                 emptyState
             } else if needsScrolling {
                 scrollableTransfersList
@@ -37,7 +43,7 @@ struct TransfersPopover: View {
 
             Spacer()
 
-            if viewModel.hasActiveTransfers {
+            if viewModel.hasActiveTransfers || viewModel.isUploadingBatch {
                 Button("Cancel All") {
                     viewModel.cancelAllTransfers()
                 }
@@ -105,7 +111,7 @@ struct TransfersPopover: View {
 
             if transfer.id != viewModel.allTransfers.last?.id {
                 Divider()
-                    .padding(.leading, 54) // Aligns with filename: 16 padding + 10 spacing + 28 icon
+                    .padding(.leading, 54)  // Aligns with filename: 16 padding + 10 spacing + 28 icon
             }
         }
     }
@@ -174,9 +180,11 @@ struct TransferItemView: View {
             }
             .buttonStyle(.plain)
             .opacity(transfer.isInProgress || isHovering ? 1 : 0)
-            .help(transfer.isInProgress
-                ? (transfer.transferType == .download ? "Cancel download" : "Cancel upload")
-                : "Remove from list")
+            .help(
+                transfer.isInProgress
+                    ? (transfer.transferType == .download ? "Cancel download" : "Cancel upload")
+                    : "Remove from list"
+            )
             .frame(width: 20, alignment: .center)
         }
         .padding(.horizontal, 16)
@@ -262,8 +270,12 @@ struct TransfersToolbarButton: View {
         Button {
             viewModel.isShowingTransfersPopover.toggle()
         } label: {
-            Label("Transfers", systemImage: viewModel.hasActiveTransfers ? "arrow.up.circle.fill" : "arrow.up.arrow.down.circle")
-                .symbolEffect(.pulse, options: .repeating, isActive: viewModel.hasActiveTransfers)
+            Label(
+                "Transfers",
+                systemImage: viewModel.hasActiveTransfers
+                    ? "arrow.up.circle.fill" : "arrow.up.arrow.down.circle"
+            )
+            .symbolEffect(.pulse, options: .repeating, isActive: viewModel.hasActiveTransfers)
         }
         .overlay(alignment: .topTrailing) {
             if viewModel.activeTransferCount > 0 {
@@ -282,9 +294,10 @@ struct TransfersToolbarButton: View {
             TransfersPopover(viewModel: viewModel)
         }
         .help("Transfers")
-        .accessibilityLabel(viewModel.activeTransferCount > 0
-            ? "Transfers, \(viewModel.activeTransferCount) active"
-            : "Transfers")
+        .accessibilityLabel(
+            viewModel.activeTransferCount > 0
+                ? "Transfers, \(viewModel.activeTransferCount) active"
+                : "Transfers")
     }
 }
 
