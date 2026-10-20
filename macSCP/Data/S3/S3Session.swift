@@ -6,9 +6,9 @@
 //
 
 import Foundation
-import SotoS3
-import NIOFoundationCompat
 import NIOCore
+import NIOFoundationCompat
+import SotoS3
 
 actor S3Session: S3SessionProtocol {
     private var client: AWSClient?
@@ -41,7 +41,8 @@ actor S3Session: S3SessionProtocol {
             let awsRegion = Region(rawValue: region)
 
             client = AWSClient(
-                credentialProvider: .static(accessKeyId: accessKeyId, secretAccessKey: secretAccessKey)
+                credentialProvider: .static(
+                    accessKeyId: accessKeyId, secretAccessKey: secretAccessKey)
             )
 
             if let endpoint = endpoint, !endpoint.isEmpty {
@@ -175,7 +176,25 @@ actor S3Session: S3SessionProtocol {
                 modificationDate: response.lastModified
             )
         } catch {
-            throw parseS3Error(error)
+            let mapped = parseS3Error(error)
+            guard case .s3ObjectNotFound = mapped else { throw mapped }
+            // An S3 directory can exist only as a marker or as an implicit prefix.
+            // Probe without changing currentPath, and never mistake access errors for absence.
+            try Task.checkCancellation()
+            let prefix = normalizePrefix(path)
+            do {
+                let listing = try await s3.listObjectsV2(
+                    S3.ListObjectsV2Request(bucket: bucketName, maxKeys: 1, prefix: prefix)
+                )
+                guard !(listing.contents ?? []).isEmpty else { throw AppError.s3ObjectNotFound }
+                return RemoteFile(
+                    name: (path as NSString).lastPathComponent, path: path,
+                    isDirectory: true, size: 0, permissions: "drwxr-xr-x"
+                )
+            } catch {
+                if error is CancellationError || Task.isCancelled { throw CancellationError() }
+                throw parseS3Error(error)
+            }
         }
     }
 
@@ -392,7 +411,9 @@ actor S3Session: S3SessionProtocol {
         try await downloadFile(from: remotePath, to: localURL, progress: nil)
     }
 
-    func downloadFile(from remotePath: String, to localURL: URL, progress: TransferProgressHandler?) async throws {
+    func downloadFile(from remotePath: String, to localURL: URL, progress: TransferProgressHandler?)
+        async throws
+    {
         guard let s3 = s3 else {
             throw AppError.notConnected
         }
@@ -435,13 +456,17 @@ actor S3Session: S3SessionProtocol {
         try await uploadFile(from: localURL, to: remotePath, progress: nil)
     }
 
-    func uploadFile(from localURL: URL, to remotePath: String, progress: TransferProgressHandler?) async throws {
+    func uploadFile(from localURL: URL, to remotePath: String, progress: TransferProgressHandler?)
+        async throws
+    {
         guard let s3 = s3 else {
             throw AppError.notConnected
         }
 
+        try Task.checkCancellation()
         let key = normalizeKey(remotePath)
-        let fileSize = try FileManager.default.attributesOfItem(atPath: localURL.path)[.size] as? Int64 ?? 0
+        let fileSize =
+            try FileManager.default.attributesOfItem(atPath: localURL.path)[.size] as? Int64 ?? 0
 
         // Use multipart upload for files > 5MB (S3 minimum part size)
         let multipartThreshold: Int64 = 5 * 1024 * 1024
@@ -462,22 +487,29 @@ actor S3Session: S3SessionProtocol {
                     bucket: bucketName,
                     key: key
                 )
+                try Task.checkCancellation()
                 _ = try await s3.putObject(request)
+                try Task.checkCancellation()
 
                 // Report completion for small files
                 progress?(fileSize)
             } else {
                 // Large file: use multipart upload to avoid memory issues
-                try await uploadMultipart(from: localURL, key: key, fileSize: fileSize, progress: progress)
+                try await uploadMultipart(
+                    from: localURL, key: key, fileSize: fileSize, progress: progress)
             }
+            try Task.checkCancellation()
             log("Uploaded: \(localURL.path) to \(remotePath)")
         } catch {
+            if error is CancellationError || Task.isCancelled { throw CancellationError() }
             throw parseS3Error(error)
         }
     }
 
     /// Uploads a large file using S3 multipart upload
-    private func uploadMultipart(from localURL: URL, key: String, fileSize: Int64, progress: TransferProgressHandler? = nil) async throws {
+    private func uploadMultipart(
+        from localURL: URL, key: String, fileSize: Int64, progress: TransferProgressHandler? = nil
+    ) async throws {
         guard let s3 = s3 else {
             throw AppError.notConnected
         }
@@ -487,6 +519,7 @@ actor S3Session: S3SessionProtocol {
         let fileHandle = try FileHandle(forReadingFrom: localURL)
         defer { try? fileHandle.close() }
 
+        try Task.checkCancellation()
         // 1. Initiate multipart upload
         let createRequest = S3.CreateMultipartUploadRequest(bucket: bucketName, key: key)
         let createResponse = try await s3.createMultipartUpload(createRequest)
@@ -502,9 +535,11 @@ actor S3Session: S3SessionProtocol {
         do {
             // 2. Upload parts
             while offset < UInt64(fileSize) {
+                try Task.checkCancellation()
                 try fileHandle.seek(toOffset: offset)
-                guard let partData = try fileHandle.read(upToCount: partSize), !partData.isEmpty else {
-                    break
+                guard let partData = try fileHandle.read(upToCount: partSize), !partData.isEmpty
+                else {
+                    throw AppError.uploadFailed("Source was truncated during multipart upload")
                 }
 
                 let uploadPartRequest = S3.UploadPartRequest(
@@ -515,9 +550,12 @@ actor S3Session: S3SessionProtocol {
                     uploadId: uploadId
                 )
 
+                try Task.checkCancellation()
                 let partResponse = try await s3.uploadPart(uploadPartRequest)
+                try Task.checkCancellation()
 
-                completedParts.append(S3.CompletedPart(eTag: partResponse.eTag, partNumber: partNumber))
+                completedParts.append(
+                    S3.CompletedPart(eTag: partResponse.eTag, partNumber: partNumber))
                 partNumber += 1
                 offset += UInt64(partData.count)
 
@@ -525,6 +563,7 @@ actor S3Session: S3SessionProtocol {
                 progress?(Int64(offset))
             }
 
+            try Task.checkCancellation()
             // 3. Complete multipart upload
             let completeRequest = S3.CompleteMultipartUploadRequest(
                 bucket: bucketName,
@@ -532,6 +571,7 @@ actor S3Session: S3SessionProtocol {
                 multipartUpload: S3.CompletedMultipartUpload(parts: completedParts),
                 uploadId: uploadId
             )
+            try Task.checkCancellation()
             _ = try await s3.completeMultipartUpload(completeRequest)
 
         } catch {
@@ -541,7 +581,10 @@ actor S3Session: S3SessionProtocol {
                 key: key,
                 uploadId: uploadId
             )
-            _ = try? await s3.abortMultipartUpload(abortRequest)
+            // Cleanup must not inherit cancellation from the upload task.
+            await Task.detached {
+                _ = try? await s3.abortMultipartUpload(abortRequest)
+            }.value
             throw error
         }
     }
@@ -666,13 +709,28 @@ actor S3Session: S3SessionProtocol {
     }
 
     private func parseS3Error(_ error: Error) -> AppError {
+        if let appError = error as? AppError { return appError }
+        if let awsError = error as? AWSErrorType {
+            switch awsError.errorCode {
+            case "NoSuchKey", "NotFound": return .s3ObjectNotFound
+            case "NoSuchBucket": return .s3BucketNotFound
+            case "AccessDenied", "Forbidden": return .s3AccessDenied
+            default: return .s3OperationFailed(error.localizedDescription)
+            }
+        }
         let description = String(describing: error).lowercased()
 
-        if description.contains("nosuchbucket") || (description.contains("bucket") && description.contains("not found")) {
+        if description.contains("nosuchbucket")
+            || (description.contains("bucket") && description.contains("not found"))
+        {
             return .s3BucketNotFound
-        } else if description.contains("nosuchkey") || description.contains("no such key") || description.contains("not found") {
+        } else if description.contains("nosuchkey") || description.contains("no such key")
+            || description.contains("not found")
+        {
             return .s3ObjectNotFound
-        } else if description.contains("accessdenied") || description.contains("access denied") || description.contains("forbidden") {
+        } else if description.contains("accessdenied") || description.contains("access denied")
+            || description.contains("forbidden")
+        {
             return .s3AccessDenied
         } else if description.contains("invalidsignature") || description.contains("credential") {
             return .invalidS3Credentials

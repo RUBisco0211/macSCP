@@ -5,8 +5,8 @@
 //  Actor-based SFTP session using Citadel
 //
 
-import Foundation
 import Citadel
+import Foundation
 import NIO
 import NIOCore
 import NIOFoundationCompat
@@ -142,11 +142,13 @@ actor SFTPSession: SFTPSessionProtocol {
                 for component in nameResponse.components {
                     guard component.filename != ".", component.filename != ".." else { continue }
 
-                    let fullPath = actualPath.hasSuffix("/")
+                    let fullPath =
+                        actualPath.hasSuffix("/")
                         ? "\(actualPath)\(component.filename)"
                         : "\(actualPath)/\(component.filename)"
 
-                    let isDirectory = Self.isDirectoryFromPermissions(component.attributes.permissions)
+                    let isDirectory = Self.isDirectoryFromPermissions(
+                        component.attributes.permissions)
                     let size = Int64(component.attributes.size ?? 0)
                     let permissions = Self.formatPermissions(component.attributes)
                     let modDate = component.attributes.accessModificationTime?.modificationTime
@@ -176,8 +178,13 @@ actor SFTPSession: SFTPSessionProtocol {
             throw AppError.notConnected
         }
 
-        let attributes = try await client.withSFTP { sftp in
-            try await sftp.getAttributes(at: path)
+        let attributes: SFTPFileAttributes
+        do {
+            attributes = try await client.withSFTP { sftp in
+                try await sftp.getAttributes(at: path)
+            }
+        } catch {
+            throw parseSFTPError(error, operation: "get file info")
         }
 
         let isDirectory = Self.isDirectoryFromPermissions(attributes.permissions)
@@ -218,7 +225,8 @@ actor SFTPSession: SFTPSessionProtocol {
 
         do {
             try await client.withSFTP { sftp in
-                try await sftp.withFile(filePath: path, flags: [.write, .create, .truncate]) { _ in }
+                try await sftp.withFile(filePath: path, flags: [.write, .create, .truncate]) { _ in
+                }
             }
             logInfo("Created file: \(path)", category: .sftp)
         } catch {
@@ -247,8 +255,10 @@ actor SFTPSession: SFTPSessionProtocol {
         }
 
         do {
-            // Use rm -rf for recursive deletion
-            let result = try await client.executeCommand("rm -rf '\(path)'")
+            // Use rm -rf for recursive deletion. Quote the path for the remote shell so
+            // names containing quotes or spaces cannot change the command.
+            let quotedPath = "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'"
+            let result = try await client.executeCommand("rm -rf -- \(quotedPath)")
             let output = String(buffer: result).trimmingCharacters(in: .whitespacesAndNewlines)
 
             if !output.isEmpty && output.lowercased().contains("permission denied") {
@@ -305,7 +315,8 @@ actor SFTPSession: SFTPSessionProtocol {
         }
 
         do {
-            let result = try await client.executeCommand("cp -r '\(sourcePath)' '\(destinationPath)'")
+            let result = try await client.executeCommand(
+                "cp -r '\(sourcePath)' '\(destinationPath)'")
             let output = String(buffer: result).trimmingCharacters(in: .whitespacesAndNewlines)
 
             if !output.isEmpty && output.lowercased().contains("permission denied") {
@@ -345,7 +356,9 @@ actor SFTPSession: SFTPSessionProtocol {
         try await downloadFile(from: remotePath, to: localURL, progress: nil)
     }
 
-    func downloadFile(from remotePath: String, to localURL: URL, progress: TransferProgressHandler?) async throws {
+    func downloadFile(from remotePath: String, to localURL: URL, progress: TransferProgressHandler?)
+        async throws
+    {
         guard let client = client else {
             throw AppError.notConnected
         }
@@ -398,36 +411,48 @@ actor SFTPSession: SFTPSessionProtocol {
         try await uploadFile(from: localURL, to: remotePath, progress: nil)
     }
 
-    func uploadFile(from localURL: URL, to remotePath: String, progress: TransferProgressHandler?) async throws {
+    func uploadFile(from localURL: URL, to remotePath: String, progress: TransferProgressHandler?)
+        async throws
+    {
         guard let client = client else {
             throw AppError.notConnected
         }
 
         do {
+            try Task.checkCancellation()
             // Use FileHandle for streaming reads instead of loading entire file into memory
             let fileHandle = try FileHandle(forReadingFrom: localURL)
             defer { try? fileHandle.close() }
 
-            let fileSize = try FileManager.default.attributesOfItem(atPath: localURL.path)[.size] as? UInt64 ?? 0
+            let fileSize =
+                try FileManager.default.attributesOfItem(atPath: localURL.path)[.size] as? UInt64
+                ?? 0
             let chunkSize = FileOperationConstants.chunkSize
 
             // Report initial progress
             progress?(0)
 
             try await client.withSFTP { sftp in
+                try Task.checkCancellation()
                 // Remove existing file if present
                 try? await sftp.remove(at: remotePath)
+                try Task.checkCancellation()
 
-                try await sftp.withFile(filePath: remotePath, flags: [.write, .create, .truncate]) { file in
+                try await sftp.withFile(filePath: remotePath, flags: [.write, .create, .truncate]) {
+                    file in
                     var offset: UInt64 = 0
 
                     while offset < fileSize {
+                        try Task.checkCancellation()
                         // Read chunk from file handle
                         try fileHandle.seek(toOffset: offset)
-                        guard let chunkData = try fileHandle.read(upToCount: chunkSize), !chunkData.isEmpty else {
-                            break
+                        guard let chunkData = try fileHandle.read(upToCount: chunkSize),
+                            !chunkData.isEmpty
+                        else {
+                            throw AppError.uploadFailed("Source was truncated during upload")
                         }
 
+                        try Task.checkCancellation()
                         // Write chunk at current offset
                         try await file.write(ByteBuffer(data: chunkData), at: offset)
                         offset += UInt64(chunkData.count)
@@ -437,8 +462,10 @@ actor SFTPSession: SFTPSessionProtocol {
                     }
                 }
             }
+            try Task.checkCancellation()
             logInfo("Uploaded: \(localURL.path) to \(remotePath)", category: .sftp)
         } catch {
+            if error is CancellationError || Task.isCancelled { throw CancellationError() }
             throw parseSFTPError(error, operation: "upload")
         }
     }
@@ -465,7 +492,8 @@ actor SFTPSession: SFTPSessionProtocol {
             try await client.withSFTP { sftp in
                 try? await sftp.remove(at: path)
 
-                try await sftp.withFile(filePath: path, flags: [.write, .create, .truncate]) { file in
+                try await sftp.withFile(filePath: path, flags: [.write, .create, .truncate]) {
+                    file in
                     try await file.write(ByteBuffer(string: content))
                 }
             }
@@ -560,11 +588,32 @@ actor SFTPSession: SFTPSessionProtocol {
     }
 
     private func parseSFTPError(_ error: Error, operation: String) -> AppError {
+        if let appError = error as? AppError { return appError }
+        let status: SFTPMessage.Status?
+        if let direct = error as? SFTPMessage.Status {
+            status = direct
+        } else if let sftpError = error as? SFTPError, case .errorStatus(let wrapped) = sftpError {
+            status = wrapped
+        } else {
+            status = nil
+        }
+        if let status {
+            switch status.errorCode {
+            case .noSuchFile: return .fileNotFound
+            case .permissionDenied: return .permissionDenied
+            case .noConnection, .connectionLost: return .connectionLost
+            default: return .sftpOperationFailed("Failed to \(operation): \(status.message)")
+            }
+        }
         let errorString = String(describing: error)
 
-        if errorString.contains("SSH_FX_PERMISSION_DENIED") || errorString.contains("Permission denied") {
+        if errorString.contains("SSH_FX_PERMISSION_DENIED")
+            || errorString.contains("Permission denied")
+        {
             return .permissionDenied
-        } else if errorString.contains("SSH_FX_NO_SUCH_FILE") || errorString.contains("No such file") {
+        } else if errorString.contains("SSH_FX_NO_SUCH_FILE")
+            || errorString.contains("No such file")
+        {
             return .fileNotFound
         } else if errorString.contains("SSH_FX_FILE_ALREADY_EXISTS") {
             return .fileAlreadyExists
