@@ -36,9 +36,9 @@
     </array>
     <key>SUFeedURL</key>
     <string
-        >https://raw.githubusercontent.com/macnev2013/macSCP/main/appcast.xml</string>
+        >https://raw.githubusercontent.com/RUBisco0211/macSCP/main/appcast.xml</string>
     <key>SUPublicEDKey</key>
-    <string>fkQ0x2i5js+9C0o32jJlZOUhNV3zCAC74nKKSUu1cUI=</string>
+    <string>0H4XMFyOwYnSwCt7Th8TohznXHUShmgURK0ZtvXXYAc=</string>
     <key>SUEnableAutomaticChecks</key>
     <true />
     <key>SUScheduledCheckInterval</key>

@@ -6,7 +6,15 @@
 set -e
 
 APP_NAME="macSCP"
-VERSION="0.2.3"
+# Prefer the release tag, then the project's MARKETING_VERSION.
+VERSION="${MACSCP_VERSION:-}"
+if [ -z "${VERSION}" ]; then
+    VERSION=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null | sed 's/^v//')
+fi
+if [ -z "${VERSION}" ]; then
+    VERSION=$(grep -m1 'MARKETING_VERSION = ' macSCP.xcodeproj/project.pbxproj | sed 's/.*MARKETING_VERSION = \(.*\);/\1/')
+fi
+VERSION="${VERSION:-0.3.0}"
 DMG_NAME="${APP_NAME}-${VERSION}"
 BUILD_DIR="build"
 DMG_DIR="dmg-staging"
@@ -93,14 +101,18 @@ echo "🔐 Signing DMG for Sparkle updates..."
 SIGN_UPDATE=$(find ~/Library/Developer/Xcode/DerivedData/macSCP-*/SourcePackages/artifacts/sparkle/Sparkle/bin -name sign_update 2>/dev/null | head -1)
 
 if [ -n "${SIGN_UPDATE}" ]; then
-    SIGNATURE_OUTPUT=$("${SIGN_UPDATE}" "${FINAL_DMG}")
-    echo "✅ DMG signed successfully"
-    echo ""
-    echo "📋 Add the following to appcast.xml <enclosure> tag:"
-    echo "${SIGNATURE_OUTPUT}"
-    echo ""
-    DMG_LENGTH=$(stat -f%z "${FINAL_DMG}")
-    echo "length=\"${DMG_LENGTH}\""
+    if SIGNATURE_OUTPUT=$("${SIGN_UPDATE}" "${FINAL_DMG}" 2>/dev/null); then
+        echo "✅ DMG signed successfully"
+        echo ""
+        echo "📋 Add the following to appcast.xml <enclosure> tag:"
+        echo "${SIGNATURE_OUTPUT}"
+        echo ""
+        DMG_LENGTH=$(stat -f%z "${FINAL_DMG}")
+        echo "length=\"${DMG_LENGTH}\""
+    else
+        echo "⚠️  DMG was not signed for Sparkle (no EdDSA private key available)."
+        echo "   The DMG is still valid for manual installation."
+    fi
 else
     echo "⚠️  sign_update not found in DerivedData. Build the project in Xcode first to resolve Sparkle SPM package."
     echo "   Then run: find ~/Library/Developer/Xcode/DerivedData/macSCP-*/SourcePackages/artifacts/sparkle/Sparkle/bin -name sign_update"

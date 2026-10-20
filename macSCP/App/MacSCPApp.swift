@@ -144,7 +144,7 @@ struct MacSCPApp: App {
 
         CommandGroup(replacing: .help) {
             Button("Report a Bug…") {
-                if let url = URL(string: "https://github.com/macnev2013/macSCP/issues") {
+                if let url = URL(string: "https://github.com/RUBisco0211/macSCP/issues") {
                     NSWorkspace.shared.open(url)
                 }
             }

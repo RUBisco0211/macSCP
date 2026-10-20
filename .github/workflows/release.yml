@@ -175,7 +175,7 @@ jobs:
           dmg_length = '${{ steps.sign.outputs.dmg_length }}'
           app_name = '${{ env.APP_NAME }}'
           pub_date = datetime.datetime.now(datetime.timezone.utc).strftime('%a, %d %b %Y %H:%M:%S %z')
-          dmg_url = f'https://github.com/macnev2013/macSCP/releases/download/v{version}/{app_name}-{version}.dmg'
+          dmg_url = f'https://github.com/${{ github.repository }}/releases/download/v{version}/{app_name}-{version}.dmg'
 
           new_item = f'''        <item>
                   <title>Version {version}</title>
