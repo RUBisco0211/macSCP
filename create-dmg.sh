@@ -15,12 +15,13 @@ if [ -z "${VERSION}" ]; then
     VERSION=$(grep -m1 'MARKETING_VERSION = ' macSCP.xcodeproj/project.pbxproj | sed 's/.*MARKETING_VERSION = \(.*\);/\1/')
 fi
 VERSION="${VERSION:-0.3.0}"
+BUILD_NUMBER="${MACSCP_BUILD_NUMBER:-$(date +%Y%m%d%H%M)}"
 DMG_NAME="${APP_NAME}-${VERSION}"
 BUILD_DIR="build"
 DMG_DIR="dmg-staging"
 FINAL_DMG="${DMG_NAME}.dmg"
 
-echo "🚀 Building macSCP..."
+echo "🚀 Building macSCP ${VERSION} (${BUILD_NUMBER})..."
 
 # Archive the app (Release build)
 xcodebuild archive \
@@ -28,6 +29,8 @@ xcodebuild archive \
     -scheme macSCP \
     -configuration Release \
     -archivePath "${BUILD_DIR}/${APP_NAME}.xcarchive" \
+    MARKETING_VERSION="${VERSION}" \
+    CURRENT_PROJECT_VERSION="${BUILD_NUMBER}" \
     CODE_SIGN_IDENTITY="-" \
     CODE_SIGN_STYLE=Manual \
     DEVELOPMENT_TEAM="" \
@@ -36,6 +39,8 @@ xcodebuild archive \
     -scheme macSCP \
     -configuration Release \
     -archivePath "${BUILD_DIR}/${APP_NAME}.xcarchive" \
+    MARKETING_VERSION="${VERSION}" \
+    CURRENT_PROJECT_VERSION="${BUILD_NUMBER}" \
     CODE_SIGN_IDENTITY="-" \
     CODE_SIGN_STYLE=Manual \
     DEVELOPMENT_TEAM=""
