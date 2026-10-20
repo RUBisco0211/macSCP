@@ -154,6 +154,14 @@ final class ShareImportCoordinator {
         activeID = nil
         window = nil
         presentNextIfNeeded()
+
+        // A share-initiated launch has no main window. Once the last share panel
+        // closes, quit instead of leaving a windowless app in the Dock.
+        if activeID == nil, pendingIDs.isEmpty, ShareApplicationDelegate.isShareImportLaunch {
+            DispatchQueue.main.async {
+                NSApp.terminate(nil)
+            }
+        }
     }
 
     private func presentWindow(for session: ShareImportSession, id: UUID) {
