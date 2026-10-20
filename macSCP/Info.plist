@@ -3,8 +3,6 @@
     "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>ShareAppGroupIdentifier</key>
-    <string>$(SHARE_APP_GROUP_IDENTIFIER)</string>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>

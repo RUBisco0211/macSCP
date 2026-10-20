@@ -8,7 +8,7 @@ final class ShareApplicationDelegate: NSObject, NSApplicationDelegate {
         if ProcessInfo.processInfo.arguments.contains("--share-import") { return true }
         // LaunchServices drops custom launch arguments when opening a URL, so the
         // freshly published request is the dependable cold-launch signal.
-        guard let store = try? ShareRequestStore.shared() else { return false }
+        let store = ShareRequestStore.appStore()
         return store.hasRecentRequest()
     }()
 

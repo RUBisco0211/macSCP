@@ -19,7 +19,7 @@ struct MacSCPApp: App {
 
     init() {
         do {
-            try ShareRequestStore.shared().removeExpiredRequests()
+            try ShareRequestStore.appStore().removeExpiredRequests()
         } catch {
             logError(
                 "Share staging cleanup unavailable: \(error.localizedDescription)", category: .app)

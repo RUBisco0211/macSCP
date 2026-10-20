@@ -21,15 +21,12 @@ struct ShareRequestStore: Sendable {
     }
 
     enum StoreError: LocalizedError {
-        case unavailable, invalidRequest
+        case invalidRequest
         case unsupportedSource(String)
         case duplicateName(String)
 
         var errorDescription: String? {
             switch self {
-            case .unavailable:
-                return
-                    "The shared container is unavailable. Sign both targets with the same team and App Group."
             case .invalidRequest:
                 return "The shared request is invalid or has expired. Please share the files again."
             case .unsupportedSource(let name):
@@ -46,20 +43,28 @@ struct ShareRequestStore: Sendable {
         self.root = root
     }
 
-    static func shared() throws -> ShareRequestStore {
-        guard
-            let identifier = Bundle.main.object(forInfoDictionaryKey: "ShareAppGroupIdentifier")
-                as? String,
-            !identifier.isEmpty, !identifier.contains("$("),
-            let container = FileManager.default.containerURL(
-                forSecurityApplicationGroupIdentifier: identifier)
-        else { throw StoreError.unavailable }
-        return ShareRequestStore(
-            root: container.appendingPathComponent("ShareRequests", isDirectory: true))
+    static let extensionBundleIdentifier = "com.macscp.macSCP.ShareExtension"
+
+    /// The extension stages into its own sandbox container. This needs no app group,
+    /// so ad-hoc signed builds work and existing app data is untouched.
+    static func extensionStore() -> ShareRequestStore {
+        ShareRequestStore(
+            root: URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+                .appendingPathComponent("Documents/ShareRequests", isDirectory: true))
     }
 
-    static func load(id: UUID) throws -> ShareRequest { try shared().load(id: id) }
-    static func remove(id: UUID) throws { try shared().remove(id: id) }
+    /// The containing app is not sandboxed, so it can read the extension's
+    /// container directly instead of requiring a shared app-group container.
+    static func appStore() -> ShareRequestStore {
+        ShareRequestStore(
+            root: FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Containers", isDirectory: true)
+                .appendingPathComponent(extensionBundleIdentifier, isDirectory: true)
+                .appendingPathComponent("Data/Documents/ShareRequests", isDirectory: true))
+    }
+
+    static func load(id: UUID) throws -> ShareRequest { try appStore().load(id: id) }
+    static func remove(id: UUID) throws { try appStore().remove(id: id) }
 
     func begin() throws -> Draft {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -72,7 +77,9 @@ struct ShareRequestStore: Sendable {
         return Draft(id: id, directory: directory)
     }
 
-    /// Must finish inside an item-provider callback if its URL is a temporary representation.
+    /// Copies the item into the draft. Must run inside the item-provider callback:
+    /// providers may hand out a temporary representation that is removed when the
+    /// callback returns, so copying later would read a file that no longer exists.
     func stage(_ source: URL, index: Int, in draft: Draft, cancelled: () -> Bool) throws -> String {
         guard source.isFileURL, index >= 0, Self.validName(source.lastPathComponent) else {
             throw StoreError.invalidRequest

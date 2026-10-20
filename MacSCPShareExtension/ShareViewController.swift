@@ -62,7 +62,7 @@ final class ShareViewController: NSViewController {
                 else {
                     throw SharePreparationError.invalidSelection
                 }
-                let requestStore = try ShareRequestStore.shared()
+                let requestStore = ShareRequestStore.extensionStore()
                 store = requestStore
                 let requestDraft = try requestStore.begin()
                 draft = requestDraft
@@ -137,21 +137,18 @@ final class ShareViewController: NSViewController {
                             gate.finish(.failure(SharePreparationError.invalidSelection))
                             return
                         }
-                        // public.file-url loaded via loadItem is a URL value, not the
-                        // callback-scoped temporary URL from loadFileRepresentation. Acquire
-                        // access here and retain both URL and provider until background copying
-                        // ends. Claiming the gate above makes cancellation join even queued work.
                         let accessed = url.startAccessingSecurityScopedResource()
-                        let lifetime = ShareProviderLifetime(provider: provider)
-                        DispatchQueue.global(qos: .userInitiated).async {
-                            let result = Result {
-                                try store.stage(
-                                    url, index: index, in: draft,
-                                    cancelled: { gate.progress.isCancelled })
-                            }
+                        defer {
                             if accessed { url.stopAccessingSecurityScopedResource() }
-                            withExtendedLifetime(lifetime) { gate.finish(result) }
                         }
+                        // Copy inside the callback: a provider may delete its temporary
+                        // representation as soon as this handler returns.
+                        let result = Result {
+                            try store.stage(
+                                url, index: index, in: draft,
+                                cancelled: { gate.progress.isCancelled })
+                        }
+                        gate.finish(result)
                     }
                 }
             } onCancel: {
@@ -199,11 +196,6 @@ final class ShareViewController: NSViewController {
             }
         }
     }
-}
-
-// Only retains the provider across queues; no provider methods run through this holder.
-private struct ShareProviderLifetime: @unchecked Sendable {
-    let provider: NSItemProvider
 }
 
 /// Cancellation may release a waiting load, but never a callback still writing its draft.

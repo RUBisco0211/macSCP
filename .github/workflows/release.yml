@@ -85,26 +85,44 @@ jobs:
             "$EXT/Contents/Info.plist"
           codesign --verify --strict "$APP"
           codesign --verify --strict "$EXT"
-          APP_ENTITLEMENTS="$(codesign -d --entitlements :- "$APP" 2>&1 || true)"
-          EXT_ENTITLEMENTS="$(codesign -d --entitlements :- "$EXT" 2>&1 || true)"
-          printf '%s\n' "$APP_ENTITLEMENTS" | grep -q 'com.apple.security.application-groups'
-          printf '%s\n' "$EXT_ENTITLEMENTS" | grep -q 'com.apple.security.application-groups'
-          /usr/libexec/PlistBuddy -c 'Print ShareAppGroupIdentifier' "$APP/Contents/Info.plist"
 
       - name: Create DMG
         run: |
+          set -euo pipefail
           DMG_NAME="${{ env.APP_NAME }}-${{ steps.version.outputs.version }}.dmg"
+          RW_DMG="build/${{ env.APP_NAME }}-rw.dmg"
+          MOUNT_DIR="build/dmg-mount"
 
           # Create staging directory
           mkdir -p dmg-staging
           cp -R "build/${{ env.APP_NAME }}.app" dmg-staging/
           ln -s /Applications dmg-staging/Applications
 
-          # Create DMG
+          # A custom volume icon must be written to a read-write image first;
+          # it also becomes the .dmg file icon shown in Finder.
+          rm -f "$DMG_NAME" "$RW_DMG"
+          rm -rf "$MOUNT_DIR"
+          mkdir -p "$MOUNT_DIR"
+
           hdiutil create -volname "${{ env.APP_NAME }}" \
             -srcfolder dmg-staging \
-            -ov -format UDZO \
-            "$DMG_NAME"
+            -ov -format UDRW \
+            "$RW_DMG"
+
+          hdiutil attach "$RW_DMG" -nobrowse -mountpoint "$MOUNT_DIR"
+
+          ICON_PATH="$MOUNT_DIR/${{ env.APP_NAME }}.app/Contents/Resources/AppIcon.icns"
+          if [ -f "$ICON_PATH" ]; then
+            cp "$ICON_PATH" "$MOUNT_DIR/.VolumeIcon.icns"
+            SetFile -a C "$MOUNT_DIR"
+          else
+            echo "WARNING: AppIcon.icns not found; using the default volume icon"
+          fi
+
+          hdiutil detach "$MOUNT_DIR"
+
+          hdiutil convert "$RW_DMG" -format UDZO -o "$DMG_NAME"
+          rm -f "$RW_DMG"
 
           echo "dmg_name=$DMG_NAME" >> $GITHUB_OUTPUT
           echo "Created: $DMG_NAME"
