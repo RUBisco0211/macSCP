@@ -91,7 +91,7 @@ actor S3Session: S3SessionProtocol {
             throw AppError.notConnected
         }
 
-        let prefix = normalizePrefix(path)
+        let prefix = Self.normalizePrefix(path)
         currentPath = "/" + prefix
 
         let request = S3.ListObjectsV2Request(
@@ -181,7 +181,7 @@ actor S3Session: S3SessionProtocol {
             // An S3 directory can exist only as a marker or as an implicit prefix.
             // Probe without changing currentPath, and never mistake access errors for absence.
             try Task.checkCancellation()
-            let prefix = normalizePrefix(path)
+            let prefix = Self.directoryProbePrefix(path)
             do {
                 let listing = try await s3.listObjectsV2(
                     S3.ListObjectsV2Request(bucket: bucketName, maxKeys: 1, prefix: prefix)
@@ -666,8 +666,9 @@ actor S3Session: S3SessionProtocol {
         return key
     }
 
-    /// Normalizes a path to a prefix for listing (removes leading /, ensures trailing / for directories)
-    private func normalizePrefix(_ path: String) -> String {
+    /// Normalizes a path to a prefix for listing (removes leading /).
+    /// Callers that probe a directory must append a trailing / themselves.
+    private nonisolated static func normalizePrefix(_ path: String) -> String {
         var prefix = path
         while prefix.hasPrefix("/") {
             prefix = String(prefix.dropFirst())
@@ -675,6 +676,16 @@ actor S3Session: S3SessionProtocol {
         if prefix == "/" || prefix.isEmpty {
             return ""
         }
+        return prefix
+    }
+
+    /// A directory exists only through its descendants or marker object, so the
+    /// probe prefix needs a trailing slash. Without it `report` would also match
+    /// sibling keys such as `report.pdf`.
+    nonisolated static func directoryProbePrefix(_ path: String) -> String {
+        var prefix = normalizePrefix(path)
+        guard !prefix.isEmpty else { return "" }
+        if !prefix.hasSuffix("/") { prefix += "/" }
         return prefix
     }
 
